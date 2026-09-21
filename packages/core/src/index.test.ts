@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createButton, createInput, validate } from '../index';
+import { createButton, createInput, validate } from './index';
 
 describe('index barrel export', () => {
   it('exports createButton, createInput, and validate as callable functions', () => {

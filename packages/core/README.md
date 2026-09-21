@@ -5,6 +5,31 @@ system's interactive components. No React, no DOM, no framework of any
 kind — every `create*` factory returns plain objects a framework-specific
 adapter (built in a separate, future package) spreads onto real elements.
 
+## Structure
+
+```
+src/
+  behaviors/
+    button/
+      createButton.ts
+      createButton.test.ts
+    input/
+      createInput.ts
+      createInput.test.ts
+  utilities/
+    validate.ts
+    validate.test.ts
+  types.ts       # shared types, used across behaviors/ and utilities/
+  index.ts       # public API (barrel export)
+```
+
+`behaviors/` holds one folder per interactive component's factory — named
+"behaviors" rather than "components" since nothing here is a renderable
+UI component; each one implements interaction *behavior* only (state,
+event handlers, ARIA), the same vocabulary React Aria uses for its own
+hooks. `utilities/` holds framework- and component-agnostic helpers used
+by one or more behaviors (currently just `validate`).
+
 ## Pattern
 
 Every factory follows the same shape:

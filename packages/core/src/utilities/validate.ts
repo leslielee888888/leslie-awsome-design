@@ -1,4 +1,4 @@
-import type { ValidationRule } from './types';
+import type { ValidationRule } from '../types';
 
 export function validate(
   value: string,

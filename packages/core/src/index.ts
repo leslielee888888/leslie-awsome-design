@@ -1,6 +1,6 @@
-export { createButton } from './createButton';
-export { createInput } from './createInput';
-export { validate } from './validate';
+export { createButton } from './behaviors/button/createButton';
+export { createInput } from './behaviors/input/createInput';
+export { validate } from './utilities/validate';
 export type {
   ValidationRule,
   ButtonConfig,

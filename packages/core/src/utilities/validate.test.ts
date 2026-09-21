@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validate } from '../validate';
+import { validate } from './validate';
 import type { ValidationRule } from '../types';
 
 describe('validate', () => {

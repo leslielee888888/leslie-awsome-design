@@ -1,5 +1,5 @@
-import { validate } from './validate';
-import type { InputConfig, InputState, InputProps } from './types';
+import { validate } from '../../utilities/validate';
+import type { InputConfig, InputState, InputProps } from '../../types';
 
 export function createInput(config: InputConfig = {}) {
   let internalValue = config.defaultValue ?? '';

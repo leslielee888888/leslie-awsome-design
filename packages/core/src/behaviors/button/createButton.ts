@@ -1,4 +1,4 @@
-import type { ButtonConfig, ButtonState, ButtonProps } from './types';
+import type { ButtonConfig, ButtonState, ButtonProps } from '../../types';
 
 export function createButton(config: ButtonConfig = {}) {
   let state: ButtonState = { pressed: false, hovered: false, focused: false };

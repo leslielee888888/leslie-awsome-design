@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createButton } from '../createButton';
+import { createButton } from './createButton';
 
 describe('createButton', () => {
   it('starts with all state flags false', () => {

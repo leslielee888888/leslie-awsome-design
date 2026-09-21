@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { createInput } from '../createInput';
-import type { ValidationRule } from '../types';
+import { createInput } from './createInput';
+import type { ValidationRule } from '../../types';
 
 describe('createInput', () => {
   describe('uncontrolled mode (no live value passed)', () => {

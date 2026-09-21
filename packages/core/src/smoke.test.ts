@@ -8,7 +8,6 @@ describe('core package scaffold', () => {
     const pkgPath = path.join(
       path.dirname(fileURLToPath(import.meta.url)),
       '..',
-      '..',
       'package.json'
     );
     const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
