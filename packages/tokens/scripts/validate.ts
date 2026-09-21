@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import Ajv from 'ajv';
@@ -97,4 +97,70 @@ export function findDuplicateKeys(
     }
   }
   return errors;
+}
+
+function findJsonFiles(dir: string): string[] {
+  const entries = readdirSync(dir, { withFileTypes: true });
+  const files: string[] = [];
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...findJsonFiles(fullPath));
+    } else if (entry.isFile() && entry.name.endsWith('.json')) {
+      files.push(fullPath);
+    }
+  }
+  return files;
+}
+
+export function validateAllTokenFiles(tokensDir: string): { valid: boolean; report: string[] } {
+  const files = findJsonFiles(tokensDir);
+  const report: string[] = [];
+  let valid = true;
+
+  const perFileTokens: Array<{ file: string; tokens: Map<string, { type: string; value: unknown }> }> = [];
+  const allTokens = new Map<string, { type: string; value: unknown }>();
+
+  for (const file of files) {
+    const result = validateTokenFile(file);
+    if (!result.valid) {
+      valid = false;
+      for (const err of result.errors) {
+        report.push(`[schema] ${path.relative(tokensDir, file)}: ${err}`);
+      }
+      continue;
+    }
+    const tokens = flattenTokens(result.data as Record<string, unknown>);
+    const relFile = path.relative(tokensDir, file);
+    perFileTokens.push({ file: relFile, tokens });
+    for (const [k, v] of tokens) allTokens.set(k, v);
+    report.push(`[ok] ${relFile}: ${tokens.size} tokens`);
+  }
+
+  const duplicateErrors = findDuplicateKeys(perFileTokens);
+  if (duplicateErrors.length > 0) {
+    valid = false;
+    for (const err of duplicateErrors) report.push(`[duplicate] ${err}`);
+  }
+
+  const aliasErrors = resolveAliases(allTokens);
+  if (aliasErrors.length > 0) {
+    valid = false;
+    for (const err of aliasErrors) report.push(`[alias] ${err}`);
+  }
+
+  return { valid, report };
+}
+
+const isMain =
+  process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+if (isMain) {
+  const tokensDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'tokens');
+  const { valid, report } = validateAllTokenFiles(tokensDir);
+  for (const line of report) console.log(line);
+  if (!valid) {
+    console.error('Token validation FAILED');
+    process.exit(1);
+  }
+  console.log('Token validation passed.');
 }

@@ -7,6 +7,7 @@ import {
   flattenTokens,
   resolveAliases,
   findDuplicateKeys,
+  validateAllTokenFiles,
 } from './validate';
 
 const fixturesDir = path.join(
@@ -71,5 +72,21 @@ describe('findDuplicateKeys', () => {
     ]);
     expect(errors.length).toBe(1);
     expect(errors[0]).toContain('spacing.md');
+  });
+});
+
+describe('validateAllTokenFiles', () => {
+  it('passes for a well-formed multi-file token tree', () => {
+    const dir = path.join(fixturesDir, 'mini-tree-valid');
+    const { valid, report } = validateAllTokenFiles(dir);
+    expect(valid).toBe(true);
+    expect(report.some((line: string) => line.startsWith('[schema]') || line.startsWith('[alias]') || line.startsWith('[duplicate]'))).toBe(false);
+  });
+
+  it('fails for a token tree with a broken alias', () => {
+    const dir = path.join(fixturesDir, 'mini-tree-invalid');
+    const { valid, report } = validateAllTokenFiles(dir);
+    expect(valid).toBe(false);
+    expect(report.some((line: string) => line.startsWith('[alias]'))).toBe(true);
   });
 });
