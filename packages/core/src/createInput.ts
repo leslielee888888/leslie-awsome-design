@@ -16,7 +16,7 @@ export function createInput(config: InputConfig = {}) {
     liveValue !== undefined ? liveValue : internalValue;
 
   return {
-    getState: (): InputState => state,
+    getState: (): Readonly<InputState> => state,
     subscribe: (fn: () => void): (() => void) => {
       listeners.add(fn);
       return () => listeners.delete(fn);
@@ -31,7 +31,10 @@ export function createInput(config: InputConfig = {}) {
         'aria-invalid': !result.isValid || undefined,
         onChange: (event: { target: { value: string } }) => {
           const next = event.target.value;
-          if (!isControlled) internalValue = next;
+          if (!isControlled) {
+            internalValue = next;
+            setState({});
+          }
           config.onValueChange?.(next);
         },
         onFocus: () => setState({ focused: true }),

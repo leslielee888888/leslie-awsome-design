@@ -12,4 +12,14 @@ describe('index barrel export', () => {
     const button = createButton();
     expect(button.getState()).toEqual({ pressed: false, hovered: false, focused: false });
   });
+
+  it('createInput imported from the barrel behaves the same as the direct import', () => {
+    const input = createInput();
+    expect(input.getState()).toEqual({ focused: false });
+    expect(input.getInputProps().value).toBe('');
+  });
+
+  it('validate imported from the barrel behaves the same as the direct import', () => {
+    expect(validate('x', [])).toEqual({ isValid: true });
+  });
 });

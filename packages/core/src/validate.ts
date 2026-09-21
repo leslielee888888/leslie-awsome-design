@@ -8,8 +8,11 @@ export function validate(
     if (rule.type === 'required' && value.trim() === '') {
       return { isValid: false, errorMessage: rule.message };
     }
-    if (rule.type === 'pattern' && value !== '' && !rule.pattern.test(value)) {
-      return { isValid: false, errorMessage: rule.message };
+    if (rule.type === 'pattern' && value !== '') {
+      rule.pattern.lastIndex = 0;
+      if (!rule.pattern.test(value)) {
+        return { isValid: false, errorMessage: rule.message };
+      }
     }
     if (rule.type === 'custom' && !rule.validate(value)) {
       return { isValid: false, errorMessage: rule.message };

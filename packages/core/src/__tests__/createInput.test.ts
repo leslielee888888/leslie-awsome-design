@@ -21,6 +21,15 @@ describe('createInput', () => {
       input.getInputProps().onChange({ target: { value: 'typed' } });
       expect(received).toBe('typed');
     });
+
+    it('notifies subscribers when the internal value changes', () => {
+      const input = createInput({ defaultValue: '' });
+      let calls = 0;
+      input.subscribe(() => { calls += 1; });
+      expect(calls).toBe(0);
+      input.getInputProps().onChange({ target: { value: 'typed' } });
+      expect(calls).toBe(1);
+    });
   });
 
   describe('controlled mode (live value passed to getInputProps)', () => {

@@ -51,4 +51,12 @@ describe('validate', () => {
     ];
     expect(validate('123', rules)).toEqual({ isValid: true });
   });
+
+  it('is deterministic for a pattern rule using a stateful (global-flagged) regex', () => {
+    const rules: ValidationRule[] = [{ type: 'pattern', pattern: /\d+/g, message: 'Digits' }];
+    const first = validate('abc123', rules);
+    const second = validate('abc123', rules);
+    expect(first).toEqual({ isValid: true });
+    expect(second).toEqual(first);
+  });
 });

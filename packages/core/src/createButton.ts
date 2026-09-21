@@ -13,7 +13,7 @@ export function createButton(config: ButtonConfig = {}) {
   const isInteractive = () => !config.disabled && !config.loading;
 
   return {
-    getState: (): ButtonState => state,
+    getState: (): Readonly<ButtonState> => state,
     subscribe: (fn: () => void): (() => void) => {
       listeners.add(fn);
       return () => listeners.delete(fn);
