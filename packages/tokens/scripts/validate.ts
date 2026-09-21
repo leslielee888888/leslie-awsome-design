@@ -60,6 +60,10 @@ export function flattenTokens(
 }
 
 const ALIAS_PATTERN = /^\{([a-zA-Z0-9_.-]+)\}$/;
+// Matches a filename ending in ".light.<ext>" or ".dark.<ext>" (e.g. "color.light.json"),
+// not merely a path that contains the substring ".light"/".dark" anywhere.
+const LIGHT_VARIANT_PATTERN = /\.light\.[^/.]+$/;
+const DARK_VARIANT_PATTERN = /\.dark\.[^/.]+$/;
 
 export function resolveAliases(
   allTokens: Map<string, { type: string; value: unknown }>
@@ -94,14 +98,12 @@ export function findDuplicateKeys(
   for (const [key, files] of seenIn) {
     if (files.length > 1) {
       // Allow duplicates only if they're theme-specific variants (.light and .dark)
-      const uniqueFiles = new Set(files);
-      if (uniqueFiles.size > 1) {
-        const isThemeVariant = files.some((f) => f.includes('.light')) &&
-          files.some((f) => f.includes('.dark')) &&
-          files.every((f) => f.includes('.light') || f.includes('.dark'));
-        if (!isThemeVariant) {
-          errors.push(`${key} is defined in multiple files: ${files.join(', ')}`);
-        }
+      const isThemeVariant =
+        files.some((f) => LIGHT_VARIANT_PATTERN.test(f)) &&
+        files.some((f) => DARK_VARIANT_PATTERN.test(f)) &&
+        files.every((f) => LIGHT_VARIANT_PATTERN.test(f) || DARK_VARIANT_PATTERN.test(f));
+      if (!isThemeVariant) {
+        errors.push(`${key} is defined in multiple files: ${files.join(', ')}`);
       }
     }
   }

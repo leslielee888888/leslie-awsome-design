@@ -73,6 +73,51 @@ describe('findDuplicateKeys', () => {
     expect(errors.length).toBe(1);
     expect(errors[0]).toContain('spacing.md');
   });
+
+  it('does not flag a key shared only between a .light and a .dark variant file', () => {
+    const light = { color: { bg: { primary: { $type: 'color', $value: '{color.white}' } } } };
+    const dark = { color: { bg: { primary: { $type: 'color', $value: '{color.black}' } } } };
+    const errors = findDuplicateKeys([
+      { file: 'semantic/color.light.json', tokens: flattenTokens(light) },
+      { file: 'semantic/color.dark.json', tokens: flattenTokens(dark) },
+    ]);
+    expect(errors).toEqual([]);
+  });
+
+  it('still flags a key shared with a third, non-variant file', () => {
+    const light = { color: { bg: { primary: { $type: 'color', $value: '{color.white}' } } } };
+    const dark = { color: { bg: { primary: { $type: 'color', $value: '{color.black}' } } } };
+    const other = { color: { bg: { primary: { $type: 'color', $value: '{color.gray.100}' } } } };
+    const errors = findDuplicateKeys([
+      { file: 'semantic/color.light.json', tokens: flattenTokens(light) },
+      { file: 'semantic/color.dark.json', tokens: flattenTokens(dark) },
+      { file: 'semantic/other.json', tokens: flattenTokens(other) },
+    ]);
+    expect(errors.length).toBe(1);
+    expect(errors[0]).toContain('color.bg.primary');
+  });
+
+  it('still flags a key shared between two files that are not light/dark variants at all', () => {
+    const a = { color: { bg: { primary: { $type: 'color', $value: '{color.white}' } } } };
+    const b = { color: { bg: { primary: { $type: 'color', $value: '{color.black}' } } } };
+    const errors = findDuplicateKeys([
+      { file: 'semantic/a.json', tokens: flattenTokens(a) },
+      { file: 'semantic/b.json', tokens: flattenTokens(b) },
+    ]);
+    expect(errors.length).toBe(1);
+    expect(errors[0]).toContain('color.bg.primary');
+  });
+
+  it('does not exempt a path that merely contains ".light"/".dark" as a substring rather than as a file extension suffix', () => {
+    const a = { color: { bg: { primary: { $type: 'color', $value: '{color.white}' } } } };
+    const b = { color: { bg: { primary: { $type: 'color', $value: '{color.black}' } } } };
+    const errors = findDuplicateKeys([
+      { file: 'semantic/lightness.json', tokens: flattenTokens(a) },
+      { file: 'semantic/darkroom.json', tokens: flattenTokens(b) },
+    ]);
+    expect(errors.length).toBe(1);
+    expect(errors[0]).toContain('color.bg.primary');
+  });
 });
 
 describe('validateAllTokenFiles', () => {
