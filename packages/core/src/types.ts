@@ -24,3 +24,23 @@ export interface ButtonProps {
   onFocus: () => void;
   onBlur: () => void;
 }
+
+export interface InputConfig {
+  disabled?: boolean;
+  rules?: ValidationRule[];
+  defaultValue?: string;
+  onValueChange?: (value: string) => void;
+}
+
+export interface InputState {
+  focused: boolean;
+}
+
+export interface InputProps {
+  disabled?: boolean;
+  value: string;
+  'aria-invalid'?: boolean;
+  onChange: (event: { target: { value: string } }) => void;
+  onFocus: () => void;
+  onBlur: () => void;
+}
