@@ -34,6 +34,10 @@ instance.getXProps(/* live args? */);     // plain attribute/handler object
 - `createInput(config?: { disabled?, rules?, defaultValue?, onValueChange? })`
   — focus state plus validation. Supports both controlled (pass a value to
   `getInputProps(value)`) and uncontrolled (omit it) usage.
+  - `getErrorMessage(liveValue?)` — same live-value pattern as
+    `getInputProps`: pass the current value for controlled usage, omit it for
+    uncontrolled. Returns the current validation error message string, or
+    `undefined` if the value is valid.
 - `validate(value, rules)` — pure validation function, exported standalone.
 
 ## Testing
