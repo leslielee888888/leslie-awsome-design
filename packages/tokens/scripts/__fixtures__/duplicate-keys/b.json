@@ -1,0 +1,5 @@
+{
+  "spacing": {
+    "md": { "$type": "dimension", "$value": "20px" }
+  }
+}

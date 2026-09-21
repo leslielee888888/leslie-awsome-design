@@ -41,3 +41,60 @@ export function validateTokenFile(filePath: string): ValidationResult {
   );
   return { valid: false, errors, data };
 }
+
+export function flattenTokens(
+  tree: Record<string, unknown>,
+  prefix: string[] = []
+): Map<string, { type: string; value: unknown }> {
+  const result = new Map<string, { type: string; value: unknown }>();
+  for (const [key, node] of Object.entries(tree)) {
+    if (node && typeof node === 'object' && '$type' in node && '$value' in node) {
+      const nodeObj = node as { $type: string; $value: unknown };
+      result.set([...prefix, key].join('.'), { type: nodeObj.$type, value: nodeObj.$value });
+    } else if (node && typeof node === 'object') {
+      const nested = flattenTokens(node as Record<string, unknown>, [...prefix, key]);
+      for (const [k, v] of nested) result.set(k, v);
+    }
+  }
+  return result;
+}
+
+const ALIAS_PATTERN = /^\{([a-zA-Z0-9_.-]+)\}$/;
+
+export function resolveAliases(
+  allTokens: Map<string, { type: string; value: unknown }>
+): string[] {
+  const errors: string[] = [];
+  for (const [tokenPath, token] of allTokens) {
+    if (typeof token.value === 'string') {
+      const match = token.value.match(ALIAS_PATTERN);
+      if (match) {
+        const target = match[1];
+        if (!allTokens.has(target)) {
+          errors.push(`${tokenPath} references unresolved alias {${target}}`);
+        }
+      }
+    }
+  }
+  return errors;
+}
+
+export function findDuplicateKeys(
+  perFileTokens: Array<{ file: string; tokens: Map<string, unknown> }>
+): string[] {
+  const seenIn = new Map<string, string[]>();
+  for (const { file, tokens } of perFileTokens) {
+    for (const key of tokens.keys()) {
+      const files = seenIn.get(key) ?? [];
+      files.push(file);
+      seenIn.set(key, files);
+    }
+  }
+  const errors: string[] = [];
+  for (const [key, files] of seenIn) {
+    if (files.length > 1) {
+      errors.push(`${key} is defined in multiple files: ${files.join(', ')}`);
+    }
+  }
+  return errors;
+}
