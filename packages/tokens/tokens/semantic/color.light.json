@@ -1,0 +1,34 @@
+{
+  "color": {
+    "bg": {
+      "primary": { "$type": "color", "$value": "{color.white}" },
+      "secondary": { "$type": "color", "$value": "{color.gray.50}" },
+      "tertiary": { "$type": "color", "$value": "{color.gray.100}" }
+    },
+    "text": {
+      "primary": { "$type": "color", "$value": "{color.gray.900}" },
+      "secondary": { "$type": "color", "$value": "{color.gray.600}" },
+      "tertiary": { "$type": "color", "$value": "{color.gray.400}" },
+      "inverse": { "$type": "color", "$value": "{color.white}" }
+    },
+    "border": {
+      "default": { "$type": "color", "$value": "{color.gray.200}" },
+      "strong": { "$type": "color", "$value": "{color.gray.300}" }
+    },
+    "accent": {
+      "default": { "$type": "color", "$value": "{color.blue.600}" },
+      "hover": { "$type": "color", "$value": "{color.blue.700}" },
+      "subtle": { "$type": "color", "$value": "{color.blue.50}" },
+      "text": { "$type": "color", "$value": "{color.blue.600}" },
+      "on-accent": { "$type": "color", "$value": "{color.white}" }
+    },
+    "success": {
+      "default": { "$type": "color", "$value": "{color.green.600}" },
+      "bg": { "$type": "color", "$value": "{color.green.50}" }
+    },
+    "error": {
+      "default": { "$type": "color", "$value": "{color.red.600}" },
+      "bg": { "$type": "color", "$value": "{color.red.50}" }
+    }
+  }
+}
