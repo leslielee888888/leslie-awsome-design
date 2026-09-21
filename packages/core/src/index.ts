@@ -1,5 +1,5 @@
-export { createButton } from './behaviors/button/createButton';
-export { createInput } from './behaviors/input/createInput';
+export { createButtonBehavior } from './behaviors/button/createButtonBehavior';
+export { createInputBehavior } from './behaviors/input/createInputBehavior';
 export { validate } from './utilities/validate';
 export type {
   ValidationRule,

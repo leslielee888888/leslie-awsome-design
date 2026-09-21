@@ -2,7 +2,7 @@ import { validate } from '../../utilities/validate';
 import { createStore } from '../../utilities/createStore';
 import type { InputConfig, InputState, InputProps } from '../../types';
 
-export function createInput(config: InputConfig = {}) {
+export function createInputBehavior(config: InputConfig = {}) {
   let internalValue = config.defaultValue ?? '';
   const rules = config.rules ?? [];
   const store = createStore<InputState>({ focused: false });

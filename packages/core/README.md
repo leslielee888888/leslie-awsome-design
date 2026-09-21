@@ -2,8 +2,11 @@
 
 Zero-dependency, framework-agnostic interaction logic for the design
 system's interactive components. No React, no DOM, no framework of any
-kind — every `create*` factory returns plain objects a framework-specific
-adapter (built in a separate, future package) spreads onto real elements.
+kind — every `create*Behavior` factory returns plain objects a
+framework-specific adapter (built in a separate, future package) spreads
+onto real elements. Named `createXBehavior` rather than `createX` — these
+functions don't create a Button or Input (no DOM element, nothing visual);
+they create a behavior-tracking controller for one.
 
 ## Structure
 
@@ -11,11 +14,11 @@ adapter (built in a separate, future package) spreads onto real elements.
 src/
   behaviors/
     button/
-      createButton.ts
-      createButton.test.ts
+      createButtonBehavior.ts
+      createButtonBehavior.test.ts
     input/
-      createInput.ts
-      createInput.test.ts
+      createInputBehavior.ts
+      createInputBehavior.test.ts
   utilities/
     createStore.ts   # shared state/subscribe mechanism used by every behavior
     createStore.test.ts
@@ -38,7 +41,7 @@ mechanism every behavior is built on) and `validate`.
 Every factory follows the same shape:
 
 ```ts
-const instance = createX(config);       // config passed once, at creation
+const instance = createXBehavior(config); // config passed once, at creation
 instance.subscribe(() => { ... });        // re-run whenever state changes
 instance.getState();                      // current state snapshot
 instance.getXProps(/* live args? */);     // plain attribute/handler object
@@ -50,16 +53,16 @@ instance.getXProps(/* live args? */);     // plain attribute/handler object
   keyed on the changed values) — this package has no opinion on how or
   when that happens.
 - **Live, fast-changing data is a function argument**, not creation
-  config — see `createInput`'s `getInputProps(liveValue?)`.
+  config — see `createInputBehavior`'s `getInputProps(liveValue?)`.
 - **Prop-getters own every attribute**, including ARIA — nothing needs to
   be added by hand outside the spread props, except business logic the
   core has no opinion about (e.g. Button's `onClick` side effect).
 
 ## API
 
-- `createButton(config?: { disabled?, loading? })` — press/hover/focus
+- `createButtonBehavior(config?: { disabled?, loading? })` — press/hover/focus
   interaction state for a plain action-trigger button (not a toggle).
-- `createInput(config?: { disabled?, rules?, defaultValue?, onValueChange? })`
+- `createInputBehavior(config?: { disabled?, rules?, defaultValue?, onValueChange? })`
   — focus state plus validation. Supports both controlled (pass a value to
   `getInputProps(value)`) and uncontrolled (omit it) usage.
   - `getErrorMessage(liveValue?)` — same live-value pattern as

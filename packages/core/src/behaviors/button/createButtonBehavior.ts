@@ -1,7 +1,7 @@
 import type { ButtonConfig, ButtonState, ButtonProps } from '../../types';
 import { createStore } from '../../utilities/createStore';
 
-export function createButton(config: ButtonConfig = {}) {
+export function createButtonBehavior(config: ButtonConfig = {}) {
   const store = createStore<ButtonState>({ pressed: false, hovered: false, focused: false });
 
   const isInteractive = () => !config.disabled && !config.loading;
