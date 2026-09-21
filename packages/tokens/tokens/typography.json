@@ -1,0 +1,36 @@
+{
+  "typography": {
+    "display": {
+      "$type": "typography",
+      "$value": { "fontFamily": "Inter", "fontWeight": 700, "fontSize": "36px", "lineHeight": "44px" }
+    },
+    "heading-1": {
+      "$type": "typography",
+      "$value": { "fontFamily": "Inter", "fontWeight": 700, "fontSize": "28px", "lineHeight": "36px" }
+    },
+    "heading-2": {
+      "$type": "typography",
+      "$value": { "fontFamily": "Inter", "fontWeight": 600, "fontSize": "22px", "lineHeight": "28px" }
+    },
+    "heading-3": {
+      "$type": "typography",
+      "$value": { "fontFamily": "Inter", "fontWeight": 600, "fontSize": "18px", "lineHeight": "24px" }
+    },
+    "body": {
+      "$type": "typography",
+      "$value": { "fontFamily": "Inter", "fontWeight": 400, "fontSize": "16px", "lineHeight": "24px" }
+    },
+    "body-small": {
+      "$type": "typography",
+      "$value": { "fontFamily": "Inter", "fontWeight": 400, "fontSize": "14px", "lineHeight": "20px" }
+    },
+    "label": {
+      "$type": "typography",
+      "$value": { "fontFamily": "Inter", "fontWeight": 500, "fontSize": "14px", "lineHeight": "20px" }
+    },
+    "caption": {
+      "$type": "typography",
+      "$value": { "fontFamily": "Inter", "fontWeight": 500, "fontSize": "12px", "lineHeight": "16px" }
+    }
+  }
+}

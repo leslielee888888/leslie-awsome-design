@@ -93,7 +93,16 @@ export function findDuplicateKeys(
   const errors: string[] = [];
   for (const [key, files] of seenIn) {
     if (files.length > 1) {
-      errors.push(`${key} is defined in multiple files: ${files.join(', ')}`);
+      // Allow duplicates only if they're theme-specific variants (.light and .dark)
+      const uniqueFiles = new Set(files);
+      if (uniqueFiles.size > 1) {
+        const isThemeVariant = files.some((f) => f.includes('.light')) &&
+          files.some((f) => f.includes('.dark')) &&
+          files.every((f) => f.includes('.light') || f.includes('.dark'));
+        if (!isThemeVariant) {
+          errors.push(`${key} is defined in multiple files: ${files.join(', ')}`);
+        }
+      }
     }
   }
   return errors;
