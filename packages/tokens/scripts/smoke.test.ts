@@ -5,11 +5,7 @@ import path from 'node:path';
 
 describe('tokens package scaffold', () => {
   it('has a package.json named "tokens"', () => {
-    const pkgPath = path.join(
-      path.dirname(fileURLToPath(import.meta.url)),
-      '..',
-      'package.json'
-    );
+    const pkgPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'package.json');
     const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
     expect(pkg.name).toBe('tokens');
   });

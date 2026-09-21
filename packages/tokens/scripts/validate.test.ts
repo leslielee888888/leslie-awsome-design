@@ -10,10 +10,7 @@ import {
   validateAllTokenFiles,
 } from './validate';
 
-const fixturesDir = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '__fixtures__'
-);
+const fixturesDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '__fixtures__');
 
 describe('validateTokenFile - schema', () => {
   it('passes for a well-formed color token file', () => {
@@ -149,7 +146,14 @@ describe('validateAllTokenFiles', () => {
     const dir = path.join(fixturesDir, 'mini-tree-valid');
     const { valid, report } = validateAllTokenFiles(dir);
     expect(valid).toBe(true);
-    expect(report.some((line: string) => line.startsWith('[schema]') || line.startsWith('[alias]') || line.startsWith('[duplicate]'))).toBe(false);
+    expect(
+      report.some(
+        (line: string) =>
+          line.startsWith('[schema]') ||
+          line.startsWith('[alias]') ||
+          line.startsWith('[duplicate]')
+      )
+    ).toBe(false);
   });
 
   it('fails for a token tree with a broken alias', () => {
@@ -187,6 +191,10 @@ describe('validateAllTokenFiles', () => {
     const dir = path.join(fixturesDir, 'empty-tree');
     const { valid, report } = validateAllTokenFiles(dir);
     expect(valid).toBe(false);
-    expect(report.some((line: string) => line.startsWith('[error]') && line.includes('no token files found'))).toBe(true);
+    expect(
+      report.some(
+        (line: string) => line.startsWith('[error]') && line.includes('no token files found')
+      )
+    ).toBe(true);
   });
 });

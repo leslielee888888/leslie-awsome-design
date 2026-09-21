@@ -10,7 +10,10 @@ describe('validate', () => {
   it('fails a required rule on an empty (or whitespace-only) value', () => {
     const rules: ValidationRule[] = [{ type: 'required', message: 'This field is required' }];
     expect(validate('', rules)).toEqual({ isValid: false, errorMessage: 'This field is required' });
-    expect(validate('   ', rules)).toEqual({ isValid: false, errorMessage: 'This field is required' });
+    expect(validate('   ', rules)).toEqual({
+      isValid: false,
+      errorMessage: 'This field is required',
+    });
   });
 
   it('passes a required rule on a non-empty value', () => {

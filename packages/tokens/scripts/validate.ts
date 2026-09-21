@@ -42,7 +42,10 @@ export function validateTokenFile(filePath: string): ValidationResult {
 
 // Resolves a JSON Pointer (e.g. "/color/gray/50/$type") against parsed token data.
 function getAtPointer(data: unknown, pointer: string): unknown {
-  const parts = pointer.split('/').filter(Boolean).map((p) => p.replace(/~1/g, '/').replace(/~0/g, '~'));
+  const parts = pointer
+    .split('/')
+    .filter(Boolean)
+    .map((p) => p.replace(/~1/g, '/').replace(/~0/g, '~'));
   let current: unknown = data;
   for (const part of parts) {
     if (current == null || typeof current !== 'object') return undefined;
@@ -80,7 +83,9 @@ function mapSchemaErrors(errors: Array<import('ajv').ErrorObject>, data: unknown
     for (const [instancePath, allowed] of allowedByPath) {
       const actualValue = getAtPointer(data, instancePath);
       const expected = [...allowed].sort().join(', ');
-      lines.push(`${instancePath} has $type "${String(actualValue)}", expected one of: ${expected}`);
+      lines.push(
+        `${instancePath} has $type "${String(actualValue)}", expected one of: ${expected}`
+      );
     }
     return lines;
   }
@@ -216,7 +221,10 @@ export function validateAllTokenFiles(tokensDir: string): { valid: boolean; repo
     return { valid: false, report: [`[error] no token files found under ${tokensDir}`] };
   }
 
-  const perFileTokens: Array<{ file: string; tokens: Map<string, { type: string; value: unknown }> }> = [];
+  const perFileTokens: Array<{
+    file: string;
+    tokens: Map<string, { type: string; value: unknown }>;
+  }> = [];
   const allTokens = new Map<string, { type: string; value: unknown }>();
 
   for (const file of files) {
@@ -252,8 +260,7 @@ export function validateAllTokenFiles(tokensDir: string): { valid: boolean; repo
   return { valid, report };
 }
 
-const isMain =
-  process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+const isMain = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
 if (isMain) {
   const tokensDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'tokens');
   const { valid, report } = validateAllTokenFiles(tokensDir);

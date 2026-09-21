@@ -72,7 +72,9 @@ describe('createButtonBehavior', () => {
   it('notifies subscribers on state change, and unsubscribe stops notifications', () => {
     const button = createButtonBehavior();
     let calls = 0;
-    const unsubscribe = button.subscribe(() => { calls += 1; });
+    const unsubscribe = button.subscribe(() => {
+      calls += 1;
+    });
     button.getButtonProps().onPointerDown();
     expect(calls).toBe(1);
     unsubscribe();
