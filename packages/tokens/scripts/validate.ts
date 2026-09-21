@@ -20,8 +20,18 @@ export interface ValidationResult {
 }
 
 export function validateTokenFile(filePath: string): ValidationResult {
-  const raw = readFileSync(filePath, 'utf-8');
-  const data = JSON.parse(raw);
+  let data: unknown;
+  try {
+    const raw = readFileSync(filePath, 'utf-8');
+    data = JSON.parse(raw);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return {
+      valid: false,
+      errors: [`Failed to read or parse ${filePath}: ${message}`],
+      data: null,
+    };
+  }
   const valid = validateAgainstSchema(data);
   if (valid) {
     return { valid: true, errors: [], data };

@@ -20,4 +20,11 @@ describe('validateTokenFile - schema', () => {
     expect(result.valid).toBe(false);
     expect(result.errors.length).toBeGreaterThan(0);
   });
+
+  it('returns a ValidationResult instead of throwing for malformed JSON', () => {
+    const result = validateTokenFile(path.join(fixturesDir, 'malformed.json'));
+    expect(result.valid).toBe(false);
+    expect(result.errors.length).toBeGreaterThan(0);
+    expect(result.data).toBeNull();
+  });
 });
