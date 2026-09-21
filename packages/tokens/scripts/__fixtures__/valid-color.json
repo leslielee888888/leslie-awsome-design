@@ -1,0 +1,7 @@
+{
+  "color": {
+    "gray": {
+      "50": { "$type": "color", "$value": "#FAFAFA" }
+    }
+  }
+}

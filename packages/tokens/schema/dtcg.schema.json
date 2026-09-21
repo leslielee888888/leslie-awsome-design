@@ -1,0 +1,104 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://design-system.local/dtcg.schema.json",
+  "title": "DTCG Token Tree",
+  "type": "object",
+  "patternProperties": {
+    "^[a-zA-Z0-9_-]+$": { "$ref": "#/definitions/node" }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "node": {
+      "oneOf": [
+        { "$ref": "#/definitions/colorToken" },
+        { "$ref": "#/definitions/dimensionToken" },
+        { "$ref": "#/definitions/typographyToken" },
+        { "$ref": "#/definitions/shadowToken" },
+        { "$ref": "#/definitions/group" }
+      ]
+    },
+    "group": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-zA-Z0-9_-]+$": { "$ref": "#/definitions/node" }
+      },
+      "additionalProperties": false,
+      "not": { "required": ["$type"] }
+    },
+    "aliasValue": {
+      "type": "string",
+      "pattern": "^\\{[a-zA-Z0-9_.-]+\\}$"
+    },
+    "colorToken": {
+      "type": "object",
+      "properties": {
+        "$type": { "const": "color" },
+        "$value": {
+          "oneOf": [
+            { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            { "$ref": "#/definitions/aliasValue" }
+          ]
+        },
+        "$description": { "type": "string" }
+      },
+      "required": ["$type", "$value"],
+      "additionalProperties": false
+    },
+    "dimensionToken": {
+      "type": "object",
+      "properties": {
+        "$type": { "const": "dimension" },
+        "$value": {
+          "oneOf": [
+            { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?px$" },
+            { "$ref": "#/definitions/aliasValue" }
+          ]
+        },
+        "$description": { "type": "string" }
+      },
+      "required": ["$type", "$value"],
+      "additionalProperties": false
+    },
+    "typographyToken": {
+      "type": "object",
+      "properties": {
+        "$type": { "const": "typography" },
+        "$value": {
+          "type": "object",
+          "properties": {
+            "fontFamily": { "type": "string" },
+            "fontWeight": { "type": "number" },
+            "fontSize": { "type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?px$" },
+            "lineHeight": { "type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?px$" }
+          },
+          "required": ["fontFamily", "fontWeight", "fontSize", "lineHeight"],
+          "additionalProperties": false
+        },
+        "$description": { "type": "string" }
+      },
+      "required": ["$type", "$value"],
+      "additionalProperties": false
+    },
+    "shadowToken": {
+      "type": "object",
+      "properties": {
+        "$type": { "const": "shadow" },
+        "$value": {
+          "type": "object",
+          "properties": {
+            "color": { "type": "string", "pattern": "^rgba?\\(.+\\)$" },
+            "offsetX": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?px$" },
+            "offsetY": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?px$" },
+            "blur": { "type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?px$" },
+            "spread": { "type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?px$" }
+          },
+          "required": ["color", "offsetX", "offsetY", "blur", "spread"],
+          "additionalProperties": false
+        },
+        "$description": { "type": "string" }
+      },
+      "required": ["$type", "$value"],
+      "additionalProperties": false
+    }
+  }
+}
