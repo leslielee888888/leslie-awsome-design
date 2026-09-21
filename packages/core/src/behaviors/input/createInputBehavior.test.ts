@@ -17,7 +17,11 @@ describe('createInputBehavior', () => {
 
     it('calls onValueChange with the new value', () => {
       let received: string | undefined;
-      const input = createInputBehavior({ onValueChange: (v) => { received = v; } });
+      const input = createInputBehavior({
+        onValueChange: (v) => {
+          received = v;
+        },
+      });
       input.getInputProps().onChange({ target: { value: 'typed' } });
       expect(received).toBe('typed');
     });
@@ -25,7 +29,9 @@ describe('createInputBehavior', () => {
     it('notifies subscribers when the internal value changes', () => {
       const input = createInputBehavior({ defaultValue: '' });
       let calls = 0;
-      input.subscribe(() => { calls += 1; });
+      input.subscribe(() => {
+        calls += 1;
+      });
       expect(calls).toBe(0);
       input.getInputProps().onChange({ target: { value: 'typed' } });
       expect(calls).toBe(1);
@@ -46,7 +52,12 @@ describe('createInputBehavior', () => {
 
     it('still calls onValueChange on change, without mutating internal value', () => {
       let received: string | undefined;
-      const input = createInputBehavior({ defaultValue: 'internal', onValueChange: (v) => { received = v; } });
+      const input = createInputBehavior({
+        defaultValue: 'internal',
+        onValueChange: (v) => {
+          received = v;
+        },
+      });
       input.getInputProps('external').onChange({ target: { value: 'newer' } });
       expect(received).toBe('newer');
       expect(input.getInputProps().value).toBe('internal'); // internal value untouched
@@ -82,7 +93,9 @@ describe('createInputBehavior', () => {
     it('tracks focus and blur via subscribe', () => {
       const input = createInputBehavior();
       let calls = 0;
-      input.subscribe(() => { calls += 1; });
+      input.subscribe(() => {
+        calls += 1;
+      });
       const props = input.getInputProps();
       props.onFocus();
       expect(input.getState().focused).toBe(true);

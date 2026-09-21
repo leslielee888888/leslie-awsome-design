@@ -5,11 +5,7 @@ import { validateAllTokenFiles } from './validate';
 
 describe('real token files', () => {
   it('pass full validation (schema + alias + duplicate checks)', () => {
-    const tokensDir = path.join(
-      path.dirname(fileURLToPath(import.meta.url)),
-      '..',
-      'tokens'
-    );
+    const tokensDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'tokens');
     const { valid, report } = validateAllTokenFiles(tokensDir);
     expect(valid, report.join('\n')).toBe(true);
   });
