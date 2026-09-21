@@ -28,6 +28,14 @@ describe('validateTokenFile - schema', () => {
     expect(result.errors.length).toBeGreaterThan(0);
   });
 
+  it('names the actual bad $type value instead of dumping every oneOf branch error', () => {
+    const result = validateTokenFile(path.join(fixturesDir, 'invalid-type.json'));
+    expect(result.valid).toBe(false);
+    // Previously this produced ~39 noisy ajv errors with no mention of "colour" at all.
+    expect(result.errors.length).toBeLessThan(10);
+    expect(result.errors.some((err) => err.includes('colour'))).toBe(true);
+  });
+
   it('returns a ValidationResult instead of throwing for malformed JSON', () => {
     const result = validateTokenFile(path.join(fixturesDir, 'malformed.json'));
     expect(result.valid).toBe(false);
@@ -108,6 +116,22 @@ describe('findDuplicateKeys', () => {
     expect(errors[0]).toContain('color.bg.primary');
   });
 
+  it('does not exempt a collision between two different-but-both-".light" files as if they were a matched light/dark pair', () => {
+    const color = { color: { bg: { primary: { $type: 'color', $value: '{color.white}' } } } };
+    const button = { color: { bg: { primary: { $type: 'color', $value: '{color.gray.900}' } } } };
+    const colorDark = { color: { bg: { primary: { $type: 'color', $value: '{color.black}' } } } };
+    const errors = findDuplicateKeys([
+      { file: 'semantic/color.light.json', tokens: flattenTokens(color) },
+      { file: 'semantic/button.light.json', tokens: flattenTokens(button) },
+      { file: 'semantic/color.dark.json', tokens: flattenTokens(colorDark) },
+    ]);
+    // color.light.json + button.light.json are NOT a matched pair (different base names),
+    // so the collision must still be flagged even though color.dark.json is a legitimate
+    // variant of color.light.json.
+    expect(errors.length).toBe(1);
+    expect(errors[0]).toContain('color.bg.primary');
+  });
+
   it('does not exempt a path that merely contains ".light"/".dark" as a substring rather than as a file extension suffix', () => {
     const a = { color: { bg: { primary: { $type: 'color', $value: '{color.white}' } } } };
     const b = { color: { bg: { primary: { $type: 'color', $value: '{color.black}' } } } };
@@ -133,5 +157,36 @@ describe('validateAllTokenFiles', () => {
     const { valid, report } = validateAllTokenFiles(dir);
     expect(valid).toBe(false);
     expect(report.some((line: string) => line.startsWith('[alias]'))).toBe(true);
+  });
+
+  it('catches a broken alias that exists only in a .dark file shadowed in the merged token map by a valid .light file', () => {
+    // Regression for the critical finding: validateAllTokenFiles used to merge every
+    // file's tokens into one flat Map before resolving aliases, so when color.light.json
+    // and color.dark.json legitimately define the same token path, whichever file was
+    // read second silently overwrote the first in that Map - and resolveAliases only ever
+    // checked the survivor. A broken alias planted only in color.dark.json passed with no
+    // [alias] error. It must now be reported.
+    const dir = path.join(fixturesDir, 'mini-tree-shadowed-alias');
+    const { valid, report } = validateAllTokenFiles(dir);
+    expect(valid).toBe(false);
+    const aliasLines = report.filter((line: string) => line.startsWith('[alias]'));
+    expect(aliasLines.length).toBe(1);
+    expect(aliasLines[0]).toContain('color.dark.json');
+    expect(aliasLines[0]).toContain('color.blue.999');
+  });
+
+  it('reports a clean error instead of throwing for a missing token directory', () => {
+    const dir = path.join(fixturesDir, 'does-not-exist');
+    expect(() => validateAllTokenFiles(dir)).not.toThrow();
+    const { valid, report } = validateAllTokenFiles(dir);
+    expect(valid).toBe(false);
+    expect(report.some((line: string) => line.startsWith('[error]'))).toBe(true);
+  });
+
+  it('reports valid: false for an existing but empty token directory instead of a false green', () => {
+    const dir = path.join(fixturesDir, 'empty-tree');
+    const { valid, report } = validateAllTokenFiles(dir);
+    expect(valid).toBe(false);
+    expect(report.some((line: string) => line.startsWith('[error]') && line.includes('no token files found'))).toBe(true);
   });
 });

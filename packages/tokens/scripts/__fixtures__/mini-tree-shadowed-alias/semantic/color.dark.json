@@ -1,0 +1,7 @@
+{
+  "color": {
+    "accent": {
+      "default": { "$type": "color", "$value": "{color.blue.999}" }
+    }
+  }
+}
