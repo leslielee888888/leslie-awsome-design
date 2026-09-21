@@ -1,34 +1,25 @@
 import type { ButtonConfig, ButtonState, ButtonProps } from '../../types';
+import { createStore } from '../../utilities/createStore';
 
 export function createButton(config: ButtonConfig = {}) {
-  let state: ButtonState = { pressed: false, hovered: false, focused: false };
-  const listeners = new Set<() => void>();
-
-  const notify = () => listeners.forEach((fn) => fn());
-  const setState = (patch: Partial<ButtonState>) => {
-    state = { ...state, ...patch };
-    notify();
-  };
+  const store = createStore<ButtonState>({ pressed: false, hovered: false, focused: false });
 
   const isInteractive = () => !config.disabled && !config.loading;
 
   return {
-    getState: (): Readonly<ButtonState> => state,
-    subscribe: (fn: () => void): (() => void) => {
-      listeners.add(fn);
-      return () => listeners.delete(fn);
-    },
+    getState: store.getState,
+    subscribe: store.subscribe,
     getButtonProps: (): ButtonProps => ({
       disabled: !isInteractive(),
       'aria-busy': config.loading || undefined,
       onPointerDown: () => {
-        if (isInteractive()) setState({ pressed: true });
+        if (isInteractive()) store.setState({ pressed: true });
       },
-      onPointerUp: () => setState({ pressed: false }),
-      onPointerEnter: () => setState({ hovered: true }),
-      onPointerLeave: () => setState({ hovered: false, pressed: false }),
-      onFocus: () => setState({ focused: true }),
-      onBlur: () => setState({ focused: false }),
+      onPointerUp: () => store.setState({ pressed: false }),
+      onPointerEnter: () => store.setState({ hovered: true }),
+      onPointerLeave: () => store.setState({ hovered: false, pressed: false }),
+      onFocus: () => store.setState({ focused: true }),
+      onBlur: () => store.setState({ focused: false }),
     }),
   };
 }

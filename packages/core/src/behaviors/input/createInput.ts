@@ -1,30 +1,22 @@
 import { validate } from '../../utilities/validate';
+import { createStore } from '../../utilities/createStore';
 import type { InputConfig, InputState, InputProps } from '../../types';
 
 export function createInput(config: InputConfig = {}) {
   let internalValue = config.defaultValue ?? '';
-  let state: InputState = { focused: false };
-  const listeners = new Set<() => void>();
-
-  const notify = () => listeners.forEach((fn) => fn());
-  const setState = (patch: Partial<InputState>) => {
-    state = { ...state, ...patch };
-    notify();
-  };
+  const rules = config.rules ?? [];
+  const store = createStore<InputState>({ focused: false });
 
   const resolveValue = (liveValue?: string): string =>
     liveValue !== undefined ? liveValue : internalValue;
 
   return {
-    getState: (): Readonly<InputState> => state,
-    subscribe: (fn: () => void): (() => void) => {
-      listeners.add(fn);
-      return () => listeners.delete(fn);
-    },
+    getState: store.getState,
+    subscribe: store.subscribe,
     getInputProps: (liveValue?: string): InputProps => {
       const isControlled = liveValue !== undefined;
       const currentValue = resolveValue(liveValue);
-      const result = validate(currentValue, config.rules ?? []);
+      const result = validate(currentValue, rules);
       return {
         disabled: config.disabled,
         value: currentValue,
@@ -33,17 +25,17 @@ export function createInput(config: InputConfig = {}) {
           const next = event.target.value;
           if (!isControlled) {
             internalValue = next;
-            setState({});
+            store.notify();
           }
           config.onValueChange?.(next);
         },
-        onFocus: () => setState({ focused: true }),
-        onBlur: () => setState({ focused: false }),
+        onFocus: () => store.setState({ focused: true }),
+        onBlur: () => store.setState({ focused: false }),
       };
     },
     getErrorMessage: (liveValue?: string): string | undefined => {
       const currentValue = resolveValue(liveValue);
-      return validate(currentValue, config.rules ?? []).errorMessage;
+      return validate(currentValue, rules).errorMessage;
     },
   };
 }

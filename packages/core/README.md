@@ -17,6 +17,8 @@ src/
       createInput.ts
       createInput.test.ts
   utilities/
+    createStore.ts   # shared state/subscribe mechanism used by every behavior
+    createStore.test.ts
     validate.ts
     validate.test.ts
   types.ts       # shared types, used across behaviors/ and utilities/
@@ -28,7 +30,8 @@ src/
 UI component; each one implements interaction *behavior* only (state,
 event handlers, ARIA), the same vocabulary React Aria uses for its own
 hooks. `utilities/` holds framework- and component-agnostic helpers used
-by one or more behaviors (currently just `validate`).
+by one or more behaviors: `createStore` (the state + `subscribe`/`notify`
+mechanism every behavior is built on) and `validate`.
 
 ## Pattern
 

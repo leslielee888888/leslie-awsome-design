@@ -5,17 +5,25 @@ export function validate(
   rules: ValidationRule[]
 ): { isValid: boolean; errorMessage?: string } {
   for (const rule of rules) {
-    if (rule.type === 'required' && value.trim() === '') {
-      return { isValid: false, errorMessage: rule.message };
-    }
-    if (rule.type === 'pattern' && value !== '') {
-      rule.pattern.lastIndex = 0;
-      if (!rule.pattern.test(value)) {
-        return { isValid: false, errorMessage: rule.message };
-      }
-    }
-    if (rule.type === 'custom' && !rule.validate(value)) {
-      return { isValid: false, errorMessage: rule.message };
+    switch (rule.type) {
+      case 'required':
+        if (value.trim() === '') {
+          return { isValid: false, errorMessage: rule.message };
+        }
+        break;
+      case 'pattern':
+        if (value !== '') {
+          rule.pattern.lastIndex = 0;
+          if (!rule.pattern.test(value)) {
+            return { isValid: false, errorMessage: rule.message };
+          }
+        }
+        break;
+      case 'custom':
+        if (!rule.validate(value)) {
+          return { isValid: false, errorMessage: rule.message };
+        }
+        break;
     }
   }
   return { isValid: true };
