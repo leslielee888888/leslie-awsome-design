@@ -53,3 +53,12 @@ export interface CardProps {
   role: string;
   'aria-labelledby'?: string;
 }
+
+export interface BadgeConfig {
+  live?: boolean;
+}
+
+export interface BadgeProps {
+  role?: string;
+  'aria-live'?: 'polite';
+}
