@@ -32,3 +32,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # The real fix: npm/pnpm only read a project .npmrc from the exact
+          # cwd a command runs in — they do not climb up to a monorepo root
+          # the way .gitignore does. `changeset publish` runs `pnpm publish`
+          # per package with cwd set to that package's own directory, so the
+          # root .npmrc (and its auth token) was invisible to it, causing
+          # `401 Unauthorized: {"error":"authentication token not provided"}`
+          # on every publish regardless of which token env var was used.
+          # Pointing NPM_CONFIG_USERCONFIG at the root .npmrc makes every
+          # nested npm/pnpm invocation resolve it correctly. Verified locally
+          # by reproducing the exact failure from a nested package directory
+          # and confirming this env var fixes it for both `npm` and `pnpm`.
+          NPM_CONFIG_USERCONFIG: ${{ github.workspace }}/.npmrc
