@@ -15,7 +15,10 @@ export default defineConfig([
   ]),
   js.configs.recommended,
   tseslint.configs.recommended,
-  { files: ['**/*.mjs'], languageOptions: { globals: { console: 'readonly', process: 'readonly' } } },
+  {
+    files: ['**/*.mjs'],
+    languageOptions: { globals: { console: 'readonly', process: 'readonly' } },
+  },
   prettier,
   {
     files: ['packages/ui-react/**/*.{ts,tsx}'],
