@@ -2,15 +2,9 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import Ajv from 'ajv';
+import schema from '../schema/dtcg.schema.json' with { type: 'json' };
 
 const ajv = new Ajv({ allErrors: true, strict: false });
-const schemaPath = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '..',
-  'schema',
-  'dtcg.schema.json'
-);
-const schema = JSON.parse(readFileSync(schemaPath, 'utf-8'));
 const validateAgainstSchema = ajv.compile(schema);
 
 export interface ValidationResult {
