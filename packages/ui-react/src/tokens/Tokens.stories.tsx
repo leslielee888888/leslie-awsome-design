@@ -57,7 +57,7 @@ function ColorSection() {
             <ColorSwatch key={entry.name} name={entry.name} value={entry.value} />
           ))}
         </div>
-        <div style={{ background: '#18181B', padding: 16, borderRadius: 8 }}>
+        <div style={{ background: '#18181B', padding: 16, borderRadius: 8, color: '#fff' }}>
           <h4 style={{ color: '#fff' }}>Dark</h4>
           {semantic.map((entry) => (
             <ColorSwatch
