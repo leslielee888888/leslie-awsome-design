@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseTokensCss, groupByPrefix } from './parseTokensCss';
+import { parseTokensCss, groupByPrefix, splitBySemantic } from './parseTokensCss';
 
 const SAMPLE_CSS = `:root {
   --color-gray-50: #FAFAFA;
@@ -43,5 +43,37 @@ describe('groupByPrefix', () => {
     expect([...groups.keys()]).toEqual(['color', 'spacing']);
     expect(groups.get('color')).toHaveLength(2);
     expect(groups.get('spacing')).toHaveLength(1);
+  });
+});
+
+describe('splitBySemantic', () => {
+  it('treats a light entry with no dark override as theme-invariant', () => {
+    const { invariant, semantic } = splitBySemantic(
+      [{ name: '--color-gray-50', value: '#FAFAFA' }],
+      []
+    );
+    expect(invariant).toEqual([{ name: '--color-gray-50', value: '#FAFAFA' }]);
+    expect(semantic).toEqual([]);
+  });
+
+  it('treats a light entry that also has a dark override as semantic', () => {
+    const { invariant, semantic } = splitBySemantic(
+      [{ name: '--color-bg-primary', value: '#FFFFFF' }],
+      [{ name: '--color-bg-primary', value: '#18181B' }]
+    );
+    expect(invariant).toEqual([]);
+    expect(semantic).toEqual([{ name: '--color-bg-primary', value: '#FFFFFF' }]);
+  });
+
+  it('splits a mixed set correctly', () => {
+    const { invariant, semantic } = splitBySemantic(
+      [
+        { name: '--color-gray-50', value: '#FAFAFA' },
+        { name: '--color-bg-primary', value: '#FFFFFF' },
+      ],
+      [{ name: '--color-bg-primary', value: '#18181B' }]
+    );
+    expect(invariant.map((e) => e.name)).toEqual(['--color-gray-50']);
+    expect(semantic.map((e) => e.name)).toEqual(['--color-bg-primary']);
   });
 });

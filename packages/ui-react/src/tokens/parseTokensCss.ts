@@ -44,3 +44,24 @@ export function groupByPrefix(entries: TokenEntry[]): Map<string, TokenEntry[]> 
   }
   return groups;
 }
+
+/**
+ * Splits a set of light-mode entries into ones that are theme-invariant
+ * (primitives — same value in every theme) and ones that genuinely change
+ * between light and dark (semantic tokens). generate-css.ts only ever
+ * writes a dark override for a semantic token, so "does this name appear
+ * in the dark set at all" is an exact, self-contained signal — no need to
+ * know which source JSON file a token came from.
+ */
+export function splitBySemantic(
+  lightEntries: TokenEntry[],
+  darkEntries: TokenEntry[]
+): { invariant: TokenEntry[]; semantic: TokenEntry[] } {
+  const darkNames = new Set(darkEntries.map((entry) => entry.name));
+  const invariant: TokenEntry[] = [];
+  const semantic: TokenEntry[] = [];
+  for (const entry of lightEntries) {
+    (darkNames.has(entry.name) ? semantic : invariant).push(entry);
+  }
+  return { invariant, semantic };
+}
