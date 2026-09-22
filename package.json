@@ -4,19 +4,28 @@
   "version": "0.0.0",
   "packageManager": "pnpm@12.5.1",
   "scripts": {
-    "test": "pnpm -r run test",
+    "test": "pnpm -r run test && pnpm run test:root",
+    "test:root": "vitest run",
     "validate": "pnpm -r run validate",
     "lint": "eslint .",
     "format": "prettier --write \"**/*.{ts,mjs}\"",
     "format:check": "prettier --check \"**/*.{ts,mjs}\"",
-    "typecheck": "pnpm -r run typecheck"
+    "typecheck": "pnpm -r run typecheck",
+    "changeset": "changeset",
+    "build": "pnpm -r run build",
+    "release": "pnpm build && changeset publish"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.3",
     "@eslint/js": "^10.0.1",
+    "@types/js-yaml": "^4.0.9",
     "eslint": "^10.11.0",
     "eslint-config-prettier": "^10.1.8",
+    "js-yaml": "^4.1.0",
     "prettier": "^3.9.8",
     "typescript": "^5.6.3",
-    "typescript-eslint": "^8.70.0"
+    "typescript-eslint": "^8.70.0",
+    "vitest": "^2.1.4"
   }
 }
