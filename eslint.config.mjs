@@ -7,5 +7,6 @@ export default defineConfig([
   globalIgnores(['**/dist/**', '**/node_modules/**', '.superpowers/**']),
   js.configs.recommended,
   tseslint.configs.recommended,
+  { files: ['**/*.mjs'], languageOptions: { globals: { console: 'readonly', process: 'readonly' } } },
   prettier,
 ]);

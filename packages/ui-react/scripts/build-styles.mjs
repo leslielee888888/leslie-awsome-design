@@ -44,7 +44,16 @@ function main() {
 
     const source = readFileSync(file);
     const { code, exports } = transform({
-      filename: path.basename(file),
+      // The scope hash lightningcss embeds in each class name is a pure
+      // function of this `filename` string alone (not file content or the
+      // real path) - verified directly. Using just the basename would make
+      // two same-named `*.module.css` files in different component folders
+      // (e.g. two `Button.module.css`) collide on identical scope hashes;
+      // since every component's resolved CSS is concatenated into one
+      // global dist/styles.css, colliding rules would silently merge/
+      // override each other. The path relative to .build-src is unique per
+      // file, so it can't collide.
+      filename: path.relative(buildSrcDir, file),
       code: source,
       cssModules: true,
     });
@@ -67,6 +76,26 @@ function main() {
         .replaceAll(`./${base}'`, `./${base}.gen.js'`)
         .replaceAll(`./${base}"`, `./${base}.gen.js"`);
       if (rewritten !== content) writeFileSync(srcFile, rewritten);
+    }
+  }
+
+  // Safety net: the rewrite pass above only matches the specific import
+  // spellings `./<base>'` / `./<base>"` relative to each CSS module's own
+  // directory. If a future component (Tasks 6+) imports a stylesheet a way
+  // that doesn't match - a different quote style, a differently-relative
+  // path, etc. - the rewrite silently fails: tsup then falls back to its
+  // broken, empty-{} CSS Modules handling, `pnpm build` still exits 0, and
+  // every class name becomes `undefined` at runtime in the published
+  // package, with nothing visibly wrong. Fail loudly instead: scan every
+  // .ts/.tsx file left in .build-src and error out by name if any of them
+  // still import a raw *.module.css path.
+  for (const srcFile of walk(buildSrcDir)) {
+    if (!/\.tsx?$/.test(srcFile) || srcFile.endsWith('.d.ts')) continue;
+    const content = readFileSync(srcFile, 'utf-8');
+    if (/\.module\.css['"]/.test(content)) {
+      throw new Error(
+        `build-styles.mjs: ${path.relative(packageRoot, srcFile)} still imports a raw *.module.css file after the CSS-Modules rewrite pass - the rewrite did not match this file's import. Fix the import spelling or extend build-styles.mjs's rewrite pass.`
+      );
     }
   }
 
