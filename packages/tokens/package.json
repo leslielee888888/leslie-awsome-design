@@ -2,6 +2,11 @@
   "name": "@leslielee888888/tokens",
   "version": "0.1.0",
   "private": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leslielee888888/leslie-awsome-design.git",
+    "directory": "packages/tokens"
+  },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

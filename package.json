@@ -10,10 +10,10 @@
     "lint": "eslint .",
     "format": "prettier --write \"**/*.{ts,mjs}\"",
     "format:check": "prettier --check \"**/*.{ts,mjs}\"",
-    "typecheck": "pnpm -r run typecheck",
+    "typecheck": "tsc --noEmit && pnpm -r run typecheck",
     "changeset": "changeset",
     "build": "pnpm -r run build",
-    "release": "pnpm build && changeset publish"
+    "release": "changeset publish"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^1.0.1",
