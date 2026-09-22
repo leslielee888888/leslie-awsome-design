@@ -44,3 +44,12 @@ export interface InputProps {
   onFocus: () => void;
   onBlur: () => void;
 }
+
+export interface CardConfig {
+  titleId?: string;
+}
+
+export interface CardProps {
+  role: string;
+  'aria-labelledby'?: string;
+}

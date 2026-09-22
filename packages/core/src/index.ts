@@ -1,5 +1,6 @@
 export { createButtonBehavior } from './behaviors/button/createButtonBehavior';
 export { createInputBehavior } from './behaviors/input/createInputBehavior';
+export { createCardBehavior } from './behaviors/card/createCardBehavior';
 export { validate } from './utilities/validate';
 export type {
   ValidationRule,
@@ -9,4 +10,6 @@ export type {
   InputConfig,
   InputState,
   InputProps,
+  CardConfig,
+  CardProps,
 } from './types';
