@@ -1,7 +1,10 @@
 packages:
-  - "packages/*"
+  - 'packages/*'
 allowBuilds:
   esbuild: true
+# Excluded from pnpm's minimum-release-age supply-chain check — needed during Task 4's
+# ui-react scaffold install; pin these two exact versions if bumping either dependency
+# later to avoid re-triggering this.
 minimumReleaseAgeExclude:
   - jsdom@30.1.1
   - w3c-xmlserializer@6.0.0

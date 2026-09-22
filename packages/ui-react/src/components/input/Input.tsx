@@ -1,4 +1,10 @@
-import { useMemo, type ChangeEventHandler, type FocusEventHandler } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useReducer,
+  type ChangeEventHandler,
+  type FocusEventHandler,
+} from 'react';
 import { createInputBehavior, type ValidationRule } from '@leslielee888888/core';
 import styles from './Input.module.css';
 
@@ -29,6 +35,15 @@ export function Input({
     () => createInputBehavior({ disabled, rules, defaultValue, onValueChange }),
     [disabled, rules, defaultValue, onValueChange]
   );
+
+  // In uncontrolled mode, `core`'s behavior stores the live text value in a
+  // private closure variable rather than in `getState()`'s snapshot, so
+  // `useSyncExternalStore` can't detect the change. Force a re-render on every
+  // store notification instead, which causes `getInputProps` to be called
+  // again below and pick up the new closure value.
+  const [, forceRerender] = useReducer((c: number) => c + 1, 0);
+  useEffect(() => behavior.subscribe(forceRerender), [behavior]);
+
   const behaviorProps = behavior.getInputProps(value);
 
   const handleChange: ChangeEventHandler<HTMLInputElement> = (event) => {
