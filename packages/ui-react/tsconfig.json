@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": ".",
+    "jsx": "react-jsx"
+  },
+  "include": ["src", ".storybook", "tsup.config.ts", "vitest.config.ts", "vitest.setup.ts"]
+}
