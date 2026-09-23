@@ -35,7 +35,7 @@ packages:
   - 'packages/frameworks/*'
 ```
 
-Dependency chain: `core` → `frameworks/react` → `ui-react`. `ui-react` no longer depends on `core` directly — only `frameworks/react` does.
+Dependency chain: `core` → `frameworks/react` → `ui-react`, but `ui-react` depends on both `core` and `frameworks/react` directly (not just the latter) — it needs `core` to import behavior factories like `pinInput` themselves, and `frameworks/react` for the `useBehavior`/`createBehaviorContext` mechanics that wire them into React. `frameworks/react` depends on neither `ui-react` nor `core`.
 
 ## 2. `core` changes (breaking)
 
