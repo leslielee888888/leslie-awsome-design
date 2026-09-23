@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useBehaviorState } from '@leslielee888888/frameworks-react';
-import { usePinInputContext, PIN_INPUT_PART_NAMES } from './PinInputContext';
+import { usePinInputContext } from './PinInputContext';
 import styles from './PinInput.module.css';
 
 export interface PinInputInputProps {
@@ -15,7 +15,7 @@ export interface PinInputInputProps {
 // selector, since `core` doesn't expose a per-box "filled" data attribute
 // (only the whole-group `data-complete`) -- see PinInput.module.css.
 export function Input({ index }: PinInputInputProps) {
-  const behavior = usePinInputContext(PIN_INPUT_PART_NAMES.Input);
+  const behavior = usePinInputContext();
   const ref = useRef<HTMLInputElement>(null);
 
   // Only `PinInput.Root` calls `useBehavior` directly. `PinInput.Input`

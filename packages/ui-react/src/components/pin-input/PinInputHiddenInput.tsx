@@ -1,5 +1,5 @@
 import { useBehaviorState } from '@leslielee888888/frameworks-react';
-import { usePinInputContext, PIN_INPUT_PART_NAMES } from './PinInputContext';
+import { usePinInputContext } from './PinInputContext';
 import styles from './PinInput.module.css';
 
 export interface PinInputHiddenInputProps {
@@ -16,7 +16,7 @@ export interface PinInputHiddenInputProps {
 // return a stale snapshot on every render after the first, since nothing
 // here would trigger a re-render on its own.
 export function HiddenInput({ name }: PinInputHiddenInputProps = {}) {
-  const behavior = usePinInputContext(PIN_INPUT_PART_NAMES.HiddenInput);
+  const behavior = usePinInputContext();
   const state = useBehaviorState(behavior);
 
   return (

@@ -154,7 +154,7 @@ describe('PinInput', () => {
     // Swallow the expected console.error React logs for the thrown render error.
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(() => render(<PinInput.Input index={0} />)).toThrow(
-      'PinInput.Input must be used within its Root'
+      'PinInput components must be used within a <PinInput.Root>'
     );
     consoleError.mockRestore();
   });
