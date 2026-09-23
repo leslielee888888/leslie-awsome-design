@@ -18,7 +18,7 @@ function createGetProp(props: PinInputProps): {
 }
 
 function setup(props: PinInputProps) {
-  const behavior = pinInput();
+  const behavior = pinInput(props);
   const { getProp } = createGetProp(props);
   behavior.setGetProp(getProp);
   return behavior;
@@ -38,9 +38,22 @@ describe('pinInput', () => {
       });
     });
 
-    it('throws if a prop-getter is called before setGetProp', () => {
-      const behavior = pinInput();
-      expect(() => behavior.getRootProps()).toThrow();
+    it('returns correct props from the initial values, before setGetProp is ever called', () => {
+      // Regression test: a real consumer (PinInput.Root) calls getRootProps()
+      // synchronously in the same render that creates the behavior, before
+      // frameworks/react's useBehavior has had any chance to call setGetProp
+      // (that only happens in a useLayoutEffect, which runs after render).
+      // The initial-props seed above must make this correct on its own.
+      const behavior = pinInput({ length: 3, disabled: true, invalid: true });
+      expect(behavior.getRootProps()).toEqual({
+        role: 'group',
+        'data-scope': 'pin-input',
+        'data-part': 'root',
+        'data-disabled': true,
+        'data-invalid': true,
+      });
+      expect(behavior.getInputProps({ index: 0 }).value).toBe('');
+      expect(behavior.getInputProps({ index: 0 })['data-disabled']).toBe(true);
     });
   });
 
@@ -84,6 +97,14 @@ describe('pinInput', () => {
       expect(behavior.getState().values).toEqual(['', '', '']);
       expect(behavior.getState().focusedIndex).toBeNull();
     });
+
+    it('moves focus back without a redundant onValueChange when the previous box is already empty', () => {
+      const onValueChange = vi.fn();
+      const behavior = setup({ length: 3, onValueChange });
+      behavior.getInputProps({ index: 1 }).onKeyDown(keydown('Backspace'));
+      expect(behavior.getState().focusedIndex).toBe(0);
+      expect(onValueChange).not.toHaveBeenCalled();
+    });
   });
 
   describe('arrow-key navigation', () => {
@@ -106,6 +127,12 @@ describe('pinInput', () => {
       behavior.getInputProps({ index: 0 }).onKeyDown(keydown('ArrowLeft'));
       expect(behavior.getState().focusedIndex).toBeNull();
       behavior.getInputProps({ index: 2 }).onKeyDown(keydown('ArrowRight'));
+      expect(behavior.getState().focusedIndex).toBeNull();
+    });
+
+    it('is a no-op while disabled', () => {
+      const behavior = setup({ length: 3, disabled: true });
+      behavior.getInputProps({ index: 1 }).onKeyDown(keydown('ArrowRight'));
       expect(behavior.getState().focusedIndex).toBeNull();
     });
   });

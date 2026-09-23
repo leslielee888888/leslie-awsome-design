@@ -15,21 +15,26 @@ const isValidChar = (char: string, type: NonNullable<PinInputProps['type']>): bo
 const isComplete = (values: string[]): boolean =>
   values.length > 0 && values.every((value) => value !== '');
 
-export function pinInput(): {
+export function pinInput(initialProps: PinInputProps): {
   getState: () => PinInputState;
   subscribe: (listener: () => void) => () => void;
   setGetProp: (getProp: GetProp<PinInputProps>) => void;
   getRootProps: () => PinInputRootProps;
   getInputProps: (part: { index: number }) => PinInputBoxProps;
 } {
-  // Nothing to configure at creation — set exactly once via setGetProp, before
-  // getRootProps()/getInputProps() are ever called. See spec's "Live-ref
-  // mechanism: verified" section for why the factory itself takes no arguments.
-  let getProp: GetProp<PinInputProps> = () => {
-    throw new Error('pinInput: setGetProp must be called before use');
-  };
+  // Seeded from the render that creates this behavior — a real consumer
+  // (PinInput.Root) calls getRootProps() synchronously in that same render,
+  // before setGetProp's effect has run, so this must already be correct
+  // rather than a throwing stub. setGetProp later upgrades it to the
+  // live-ref-backed accessor for every render after. See the design spec's
+  // "Live-ref mechanism: verified" section.
+  let getProp: GetProp<PinInputProps> = (key) => initialProps[key];
 
-  const store = createStore<PinInputState>({ values: [], focusedIndex: null, complete: false });
+  const store = createStore<PinInputState>({
+    values: Array.from({ length: initialProps.length }, () => ''),
+    focusedIndex: null,
+    complete: false,
+  });
 
   const currentType = (): NonNullable<PinInputProps['type']> => getProp('type') ?? 'numeric';
 
@@ -84,14 +89,17 @@ export function pinInput(): {
       return;
     }
     if (index > 0) {
-      const next = [...values];
-      next[index - 1] = '';
-      commitValues(next);
+      if (values[index - 1] !== '') {
+        const next = [...values];
+        next[index - 1] = '';
+        commitValues(next);
+      }
       moveFocus(index - 1);
     }
   };
 
   const handleArrow = (index: number, key: 'ArrowLeft' | 'ArrowRight'): void => {
+    if (getProp('disabled')) return;
     const length = getProp('length');
     const next = index + (key === 'ArrowLeft' ? -1 : 1);
     if (next >= 0 && next < length) {
