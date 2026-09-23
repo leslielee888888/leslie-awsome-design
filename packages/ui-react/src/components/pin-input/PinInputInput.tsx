@@ -1,5 +1,6 @@
-import { useEffect, useRef, useSyncExternalStore } from 'react';
-import { usePinInputContext } from './PinInputContext';
+import { useEffect, useRef } from 'react';
+import { useBehaviorState } from '@leslielee888888/frameworks-react';
+import { usePinInputContext, PIN_INPUT_PART_NAMES } from './PinInputContext';
 import styles from './PinInput.module.css';
 
 export interface PinInputInputProps {
@@ -14,18 +15,19 @@ export interface PinInputInputProps {
 // selector, since `core` doesn't expose a per-box "filled" data attribute
 // (only the whole-group `data-complete`) -- see PinInput.module.css.
 export function Input({ index }: PinInputInputProps) {
-  const behavior = usePinInputContext('PinInput.Input');
+  const behavior = usePinInputContext(PIN_INPUT_PART_NAMES.Input);
   const ref = useRef<HTMLInputElement>(null);
 
-  // Only `PinInput.Root` calls `useBehavior` (and therefore
-  // `useSyncExternalStore`) directly. `PinInput.Input` elements are created
-  // by the *consumer* and handed to `Root` as `children`, so when `Root`
-  // re-renders on its own (from its `useBehavior` subscription), React's
-  // "same child element reference -> bail out" optimization means that
-  // re-render does NOT cascade down into this component -- it would keep
-  // rendering stale `getInputProps()` output forever without its own
-  // subscription. Same reasoning as `PinInput.HiddenInput`.
-  useSyncExternalStore(behavior.subscribe, behavior.getState);
+  // Only `PinInput.Root` calls `useBehavior` directly. `PinInput.Input`
+  // elements are created by the *consumer* and handed to `Root` as
+  // `children`, so when `Root` re-renders on its own, React's "same child
+  // element reference -> bail out" optimization means that re-render does
+  // NOT cascade down into this component -- it would keep rendering stale
+  // `getInputProps()` output forever without its own subscription.
+  // `useBehaviorState` (from frameworks/react) is that subscription, written
+  // once so no leaf component has to wire up `useSyncExternalStore` by hand.
+  const state = useBehaviorState(behavior);
+  const isFocused = state.focusedIndex === index;
 
   const boxProps = behavior.getInputProps({ index });
 
@@ -33,12 +35,14 @@ export function Input({ index }: PinInputInputProps) {
   // backspace-to-previous, arrow-key nav) in `state.focusedIndex`, but
   // `core` has no DOM to call `.focus()` on -- it's framework-agnostic by
   // design (see core/README.md). Moving real DOM focus in response to that
-  // state is this framework binding's job.
+  // state is this framework binding's job. Keyed on `isFocused` (not run
+  // unconditionally) so a keystroke in one box doesn't re-run this effect in
+  // every other box too.
   useEffect(() => {
-    if (behavior.getState().focusedIndex === index && document.activeElement !== ref.current) {
+    if (isFocused && document.activeElement !== ref.current) {
       ref.current?.focus();
     }
-  });
+  }, [isFocused]);
 
   return <input ref={ref} placeholder=" " className={styles.box} {...boxProps} />;
 }

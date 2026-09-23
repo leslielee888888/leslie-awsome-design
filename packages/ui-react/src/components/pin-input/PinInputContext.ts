@@ -11,3 +11,14 @@ import type { pinInput } from '@leslielee888888/core';
  */
 export const { Provider: PinInputProvider, useBehaviorContext: usePinInputContext } =
   createBehaviorContext<ReturnType<typeof pinInput>>();
+
+/**
+ * Names passed to `usePinInputContext(name)` by each part, centralized here
+ * instead of re-typed as a string literal in each leaf component — a typo in
+ * one file can't silently drift from what the others use, and there's one
+ * place to update if a part is ever renamed.
+ */
+export const PIN_INPUT_PART_NAMES = {
+  Input: 'PinInput.Input',
+  HiddenInput: 'PinInput.HiddenInput',
+} as const;

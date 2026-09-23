@@ -16,6 +16,27 @@ describe('Input', () => {
     expect(onValueChange).toHaveBeenCalledWith('abc');
   });
 
+  it('resets the uncontrolled value when defaultValue changes after mount', () => {
+    // Regression test: useState's initializer only runs once, on mount, so
+    // this needs an explicit "adjust state during render" reset -- without
+    // it, changing defaultValue after mount silently did nothing.
+    const { rerender } = render(<Input defaultValue="first" />);
+    expect(screen.getByRole('textbox')).toHaveValue('first');
+
+    rerender(<Input defaultValue="second" />);
+    expect(screen.getByRole('textbox')).toHaveValue('second');
+  });
+
+  it('does not reset a controlled value when defaultValue changes (defaultValue is ignored while controlled)', () => {
+    const { rerender } = render(
+      <Input value="typed" defaultValue="first" onValueChange={() => {}} />
+    );
+    expect(screen.getByRole('textbox')).toHaveValue('typed');
+
+    rerender(<Input value="typed" defaultValue="second" onValueChange={() => {}} />);
+    expect(screen.getByRole('textbox')).toHaveValue('typed');
+  });
+
   it('is disabled when the disabled prop is true', () => {
     render(<Input disabled />);
     expect(screen.getByRole('textbox')).toBeDisabled();

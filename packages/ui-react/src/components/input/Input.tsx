@@ -32,6 +32,16 @@ export function Input({
 }: InputProps) {
   const isControlled = value !== undefined;
   const [internalValue, setInternalValue] = useState(defaultValue ?? '');
+  // React's documented "adjust state during render" pattern: useState's
+  // initializer only runs on mount, so without this, changing `defaultValue`
+  // after mount would silently do nothing (the old core-behavior-based
+  // implementation recreated the whole behavior via useMemo keyed on
+  // defaultValue, which did reset it). Bails out after one extra render.
+  const [prevDefaultValue, setPrevDefaultValue] = useState(defaultValue);
+  if (!isControlled && defaultValue !== prevDefaultValue) {
+    setPrevDefaultValue(defaultValue);
+    setInternalValue(defaultValue ?? '');
+  }
   const currentValue = isControlled ? value : internalValue;
   const result = validate(currentValue, rules ?? []);
 
