@@ -30,11 +30,9 @@ export function Input({
     [disabled, rules, defaultValue, onValueChange]
   );
 
-  // The uncontrolled value now lives in core's own store (see
-  // createInputBehavior.ts), so getState()'s snapshot is complete and
-  // useSyncExternalStore correctly re-renders on every change. The
-  // snapshot itself isn't used directly below — getInputProps(value)
-  // resolves the current value itself — this call exists purely to
+  // Value now lives in core's own store — see createInputBehavior.ts for
+  // why. The snapshot itself isn't used directly below (getInputProps(value)
+  // resolves the current value itself); this call exists purely to
   // subscribe this component to the store's changes.
   useSyncExternalStore(behavior.subscribe, behavior.getState);
 
