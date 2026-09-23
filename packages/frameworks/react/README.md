@@ -9,11 +9,14 @@ one at `packages/frameworks/vue` (`@leslielee888888/frameworks-vue`).
 ## Exports
 
 - **`useBehavior(factory, props)`** — creates a behavior exactly once (via
-  `useState(factory)`, called with zero arguments), keeps a `getProp`
-  accessor over `props` fresh across renders via an internal live-ref, wires
-  it into the behavior with `setGetProp` inside its own `useLayoutEffect`,
-  and subscribes the caller to the behavior's store with
-  `useSyncExternalStore` so it re-renders on store changes.
+  `useState(() => factory(props))`, seeded with the props from the render
+  that creates it — a plain object, not a ref read, so this is safe during
+  render and gives correct output on the very first render, before any effect
+  has run), keeps a `getProp` accessor over `props` fresh across renders via
+  an internal live-ref, upgrades the behavior to that live accessor with
+  `setGetProp` inside its own `useLayoutEffect`, and subscribes the caller to
+  the behavior's store with `useSyncExternalStore` so it re-renders on store
+  changes.
 - **`createBehaviorContext<TBehavior>()`** — returns `{ Provider,
 useBehaviorContext }` for sharing a behavior with descendant components.
   `useBehaviorContext(componentName)` throws

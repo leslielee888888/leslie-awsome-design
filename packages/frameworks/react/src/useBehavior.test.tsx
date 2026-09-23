@@ -7,8 +7,13 @@ interface FakeProps {
   label: string;
 }
 
-function createFakeBehavior() {
-  let getProp: GetProp<FakeProps> | null = null;
+function createFakeBehavior(initialProps: FakeProps) {
+  // Seeded from the render that created it — correct from the very first
+  // call, before setGetProp ever runs. Real behaviors (pinInput) must do the
+  // same: getRootProps()/getInputProps() are called synchronously in the same
+  // render that creates the behavior (see PinInput.Root in the design spec),
+  // before useBehavior's useLayoutEffect has had any chance to fire.
+  let getProp: GetProp<FakeProps> = (key) => initialProps[key];
   let state = { count: 0 };
   const listeners = new Set<() => void>();
 
@@ -24,9 +29,6 @@ function createFakeBehavior() {
     // Stand-in for a real behavior's `getRootProps()`/`getInputProps()` —
     // reads through the accessor exactly the way `pinInput` would.
     getRootProps() {
-      if (!getProp) {
-        throw new Error('getProp not set yet');
-      }
       return { 'data-label': getProp('label') };
     },
     // Test-only: simulates the store changing (e.g. a user interaction
@@ -43,13 +45,19 @@ type FakeBehavior = ReturnType<typeof createFakeBehavior>;
 function Harness({
   factory,
   onBehavior,
+  onRootProps,
   ...props
 }: FakeProps & {
-  factory: () => FakeBehavior;
+  factory: (initialProps: FakeProps) => FakeBehavior;
   onBehavior: (behavior: FakeBehavior) => void;
+  // Called synchronously in the render body — mirrors how a real consumer
+  // (PinInput.Root) spreads `behavior.getRootProps()` directly into JSX,
+  // not how a test would call it after render() has already flushed effects.
+  onRootProps?: (rootProps: ReturnType<FakeBehavior['getRootProps']>) => void;
 }) {
   const behavior = useBehavior(factory, props);
   onBehavior(behavior);
+  onRootProps?.(behavior.getRootProps());
   return <div data-testid="count">{behavior.getState().count}</div>;
 }
 
@@ -66,6 +74,28 @@ describe('useBehavior', () => {
 
     expect(factory).toHaveBeenCalledTimes(1);
     expect(new Set(captured).size).toBe(1);
+  });
+
+  it('returns correct prop-getter output on the very first render, called synchronously in the render body — before any effect has run', () => {
+    // Regression test: an earlier version of useBehavior only wired the
+    // accessor inside useLayoutEffect, with nothing seeding it beforehand.
+    // A consumer calling getRootProps() synchronously during the same render
+    // that creates the behavior (exactly what PinInput.Root's JSX does) would
+    // read through an unset accessor and get wrong/throwing output on mount,
+    // with nothing to force a corrective second render afterward.
+    const factory = vi.fn(createFakeBehavior);
+    const rootPropsDuringRender: Array<ReturnType<FakeBehavior['getRootProps']>> = [];
+
+    render(
+      <Harness
+        factory={factory}
+        label="hello"
+        onBehavior={() => {}}
+        onRootProps={(rootProps) => rootPropsDuringRender.push(rootProps)}
+      />
+    );
+
+    expect(rootPropsDuringRender[0]).toEqual({ 'data-label': 'hello' });
   });
 
   it('wires setGetProp before the first observable prop-reading call, reflecting current props', () => {

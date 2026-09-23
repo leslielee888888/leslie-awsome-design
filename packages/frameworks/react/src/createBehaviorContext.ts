@@ -6,12 +6,14 @@ import { createContext, useContext } from 'react';
  * of every compound component in `ui-react` hand-rolling its own
  * `createContext`/`useContext`/non-null-assertion.
  */
-export function createBehaviorContext<TBehavior>() {
+export function createBehaviorContext<TBehavior extends object>() {
   const Context = createContext<TBehavior | null>(null);
 
   function useBehaviorContext(componentName: string): TBehavior {
     const value = useContext(Context);
-    if (!value) {
+    // `TBehavior extends object` rules out a legitimate falsy value (0, '', false)
+    // ever reaching here, so a strict null check (not a truthiness check) is enough.
+    if (value === null) {
       throw new Error(`${componentName} must be used within its Root`);
     }
     return value;
