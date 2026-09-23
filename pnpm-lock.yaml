@@ -248,10 +248,10 @@ importers:
   packages/ui-react:
     dependencies:
       '@leslielee888888/core':
-        specifier: workspace:^0.1.1
+        specifier: workspace:^0.2.0
         version: link:../core
       '@leslielee888888/tokens':
-        specifier: workspace:^0.1.1
+        specifier: workspace:^0.2.0
         version: link:../tokens
     devDependencies:
       '@storybook/addon-a11y':

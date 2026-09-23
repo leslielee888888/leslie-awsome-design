@@ -28,6 +28,18 @@ jobs:
       - name: Create Release Pull Request or Publish
         uses: changesets/action@v2
         with:
+          # `changeset version` alone only bumps package.json/CHANGELOG.md —
+          # it never touches pnpm-lock.yaml. Left at the default, the
+          # resulting "Version Packages" PR ships an out-of-date lockfile
+          # (workspace:^0.1.1 in the lockfile vs. the newly bumped
+          # workspace:^0.2.0 in package.json), which then fails every
+          # `pnpm install --frozen-lockfile` on main the moment that PR
+          # merges — CI, Release, and Validate Tokens all broke on this the
+          # first time a real version bump went out. `pnpm run version`
+          # (defined in the root package.json) runs the bump and then
+          # `pnpm install --lockfile-only` in the same step, so the lockfile
+          # ships correct in the Version PR itself.
+          version-script: pnpm run version
           publish-script: pnpm release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
