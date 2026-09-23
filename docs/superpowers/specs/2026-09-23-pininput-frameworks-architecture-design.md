@@ -169,16 +169,17 @@ function useBehavior<
 
 Because nothing is classified as structural or live anymore, `useBehavior(factory, props)` really is just two arguments — the factory and one flat props object — with no wrapper hook, no per-behavior key list to maintain, and no derived type that has to be trusted to line up with what got stripped. `ui-react` imports behavior factories (e.g. `pinInput`) directly from `@leslielee888888/core`, alongside `useBehavior` from `@leslielee888888/frameworks-react`.
 
-**`createBehaviorContext`** is this package's other export. Every compound behavior (`pinInput` today; a future Tabs or Select, per the Open follow-ups) needs the exact same "share the behavior with descendants, guard against use outside its Root" wiring — written once here instead of every compound component in `ui-react` hand-rolling its own `createContext`/`useContext`/non-null-assertion. It's simpler now than it would have been under the structural/live design, since there's only one thing to share:
+**`createBehaviorContext`** is this package's other export. Every compound behavior (`pinInput` today; a future Tabs or Select, per the Open follow-ups) needs the exact same "share the behavior with descendants, guard against use outside its Root" wiring — written once here instead of every compound component in `ui-react` hand-rolling its own `createContext`/`useContext`/non-null-assertion. It's simpler now than it would have been under the structural/live design, since there's only one thing to share. `rootName` is passed once, at creation — not by every descendant part at every call site, which would mean defining a name per _part_ (and redoing that for every part of every future compound component) instead of one name per component _family_:
 
 ```ts
 // createBehaviorContext.ts
-function createBehaviorContext<TBehavior>() {
+function createBehaviorContext<TBehavior extends object>(rootName: string) {
   const Context = createContext<TBehavior | null>(null);
 
-  function useBehaviorContext(componentName: string): TBehavior {
+  function useBehaviorContext(): TBehavior {
     const value = useContext(Context);
-    if (!value) throw new Error(`${componentName} must be used within its Root`);
+    if (value === null)
+      throw new Error(`${rootName} components must be used within a <${rootName}.Root>`);
     return value;
   }
 
@@ -194,7 +195,7 @@ function createBehaviorContext<TBehavior>() {
 
 ```tsx
 const { Provider: PinInputProvider, useBehaviorContext: usePinInputContext } =
-  createBehaviorContext<ReturnType<typeof pinInput>>();
+  createBehaviorContext<ReturnType<typeof pinInput>>('PinInput');
 
 function Root({
   length,
@@ -222,7 +223,7 @@ function Root({
 }
 
 function Input({ index }: { index: number }) {
-  const behavior = usePinInputContext('PinInput.Input');
+  const behavior = usePinInputContext();
   return <input {...behavior.getInputProps({ index })} />;
 }
 ```
