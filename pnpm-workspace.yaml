@@ -1,5 +1,6 @@
 packages:
   - 'packages/*'
+  - 'packages/frameworks/*'
 allowBuilds:
   esbuild: true
 # Excluded from pnpm's minimum-release-age supply-chain check — needed during Task 4's
