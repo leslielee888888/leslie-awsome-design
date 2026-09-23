@@ -1,5 +1,11 @@
 # @leslielee888888/tokens
 
+## 0.2.0
+
+### Minor Changes
+
+- [`0c9056b`](https://github.com/leslielee888888/leslie-awsome-design/commit/0c9056be4ac02b751b945e87edc77a0a8b3494e5) Thanks [@leslieleesoftwareengineer](https://github.com/leslieleesoftwareengineer)! - Add generated CSS output (dist-styles/tokens.css, dist-styles/tailwind-theme.css) via the new generate-css script, consumed by ui-react's build and Storybook.
+
 ## 0.1.1
 
 ### Patch Changes
