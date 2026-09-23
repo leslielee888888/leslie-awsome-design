@@ -30,7 +30,7 @@ src/
 
 `behaviors/` holds one folder per interactive component's factory — named
 "behaviors" rather than "components" since nothing here is a renderable
-UI component; each one implements interaction *behavior* only (state,
+UI component; each one implements interaction _behavior_ only (state,
 event handlers, ARIA), the same vocabulary React Aria uses for its own
 hooks. `utilities/` holds framework- and component-agnostic helpers used
 by one or more behaviors: `createStore` (the state + `subscribe`/`notify`
@@ -54,14 +54,19 @@ instance.getXProps(/* live args? */);     // plain attribute/handler object
   when that happens.
 - **Live, fast-changing data is a function argument**, not creation
   config — see `createInputBehavior`'s `getInputProps(liveValue?)`.
-- **Prop-getters own every attribute**, including ARIA — nothing needs to
-  be added by hand outside the spread props, except business logic the
-  core has no opinion about (e.g. Button's `onClick` side effect).
+- **Prop-getters own every attribute**, including ARIA and the primary
+  interaction callback — nothing needs to be added by hand outside the
+  spread props. Button's `onClick` is config, gated the same way
+  `onPointerDown` already is: it only fires when the button is
+  interactive (not `disabled`, not `loading`), the same as
+  `createInputBehavior`'s `onValueChange`.
 
 ## API
 
-- `createButtonBehavior(config?: { disabled?, loading? })` — press/hover/focus
-  interaction state for a plain action-trigger button (not a toggle).
+- `createButtonBehavior(config?: { disabled?, loading?, onClick? })` —
+  press/hover/focus interaction state for a plain action-trigger button
+  (not a toggle). `getButtonProps().onClick` calls the configured
+  `onClick` only when the button is interactive.
 - `createInputBehavior(config?: { disabled?, rules?, defaultValue?, onValueChange? })`
   — focus state plus validation. Supports both controlled (pass a value to
   `getInputProps(value)`) and uncontrolled (omit it) usage.

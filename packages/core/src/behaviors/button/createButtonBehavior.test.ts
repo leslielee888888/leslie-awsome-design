@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createButtonBehavior } from './createButtonBehavior';
 
 describe('createButtonBehavior', () => {
@@ -67,6 +67,32 @@ describe('createButtonBehavior', () => {
     expect(createButtonBehavior().getButtonProps()['aria-busy']).toBeUndefined();
     expect(createButtonBehavior({ loading: true }).getButtonProps()['aria-busy']).toBe(true);
     expect(createButtonBehavior({ disabled: true }).getButtonProps()['aria-busy']).toBeUndefined();
+  });
+
+  it('calls the configured onClick when interactive', () => {
+    const onClick = vi.fn();
+    const button = createButtonBehavior({ onClick });
+    button.getButtonProps().onClick();
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not call onClick when disabled', () => {
+    const onClick = vi.fn();
+    const button = createButtonBehavior({ disabled: true, onClick });
+    button.getButtonProps().onClick();
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it('does not call onClick when loading', () => {
+    const onClick = vi.fn();
+    const button = createButtonBehavior({ loading: true, onClick });
+    button.getButtonProps().onClick();
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it('does not throw when onClick is not configured', () => {
+    const button = createButtonBehavior();
+    expect(() => button.getButtonProps().onClick()).not.toThrow();
   });
 
   it('notifies subscribers on state change, and unsubscribe stops notifications', () => {

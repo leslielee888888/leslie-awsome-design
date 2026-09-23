@@ -1,10 +1,4 @@
-import {
-  useEffect,
-  useMemo,
-  useReducer,
-  type ChangeEventHandler,
-  type FocusEventHandler,
-} from 'react';
+import { useEffect, useMemo, useReducer, type FocusEventHandler } from 'react';
 import { createInputBehavior, type ValidationRule } from '@leslielee888888/core';
 import styles from './Input.module.css';
 
@@ -46,19 +40,12 @@ export function Input({
 
   const behaviorProps = behavior.getInputProps(value);
 
-  const handleChange: ChangeEventHandler<HTMLInputElement> = (event) => {
-    behaviorProps.onChange({ target: { value: event.target.value } });
-  };
-
   return (
     <input
       type="text"
       className={styles.input}
       placeholder={placeholder}
-      disabled={behaviorProps.disabled}
-      value={behaviorProps.value}
-      aria-invalid={behaviorProps['aria-invalid']}
-      onChange={handleChange}
+      {...behaviorProps}
       onFocus={(event) => {
         behaviorProps.onFocus();
         onFocus?.(event);
