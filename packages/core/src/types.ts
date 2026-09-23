@@ -36,6 +36,7 @@ export interface InputConfig {
 
 export interface InputState {
   focused: boolean;
+  value: string;
 }
 
 export interface InputProps {
