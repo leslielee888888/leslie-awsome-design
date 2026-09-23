@@ -21,7 +21,7 @@ export default defineConfig([
   },
   prettier,
   {
-    files: ['packages/ui-react/**/*.{ts,tsx}'],
+    files: ['packages/ui-react/**/*.{ts,tsx}', 'packages/frameworks/react/**/*.{ts,tsx}'],
     extends: [
       tseslint.configs.recommendedTypeChecked,
       reactHooks.configs.flat['recommended-latest'],
