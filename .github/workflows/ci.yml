@@ -16,8 +16,14 @@ jobs:
           node-version-file: .node-version
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+      # Build before lint: ui-react's type-aware ESLint rules (projectService)
+      # need core/tokens' dist/*.d.ts to resolve their imports' real types.
+      # On a truly fresh checkout (no gitignored dist/ left over from a prior
+      # local run) those don't exist until a build has happened, so lint ran
+      # first would treat every core/tokens import as an unresolved "error"
+      # type and fail with a wall of @typescript-eslint/no-unsafe-* findings.
+      - run: pnpm build
       - run: pnpm lint
       - run: pnpm format:check
       - run: pnpm typecheck
-      - run: pnpm build
       - run: pnpm test
