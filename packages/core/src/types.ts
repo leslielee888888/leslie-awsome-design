@@ -6,6 +6,7 @@ export type ValidationRule =
 export interface ButtonConfig {
   disabled?: boolean;
   loading?: boolean;
+  onClick?: () => void;
 }
 
 export interface ButtonState {
@@ -17,6 +18,7 @@ export interface ButtonState {
 export interface ButtonProps {
   disabled: boolean;
   'aria-busy'?: boolean;
+  onClick: () => void;
   onPointerDown: () => void;
   onPointerUp: () => void;
   onPointerEnter: () => void;
@@ -34,6 +36,7 @@ export interface InputConfig {
 
 export interface InputState {
   focused: boolean;
+  value: string;
 }
 
 export interface InputProps {

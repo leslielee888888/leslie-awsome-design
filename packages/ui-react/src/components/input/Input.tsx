@@ -1,10 +1,4 @@
-import {
-  useEffect,
-  useMemo,
-  useReducer,
-  type ChangeEventHandler,
-  type FocusEventHandler,
-} from 'react';
+import { useMemo, useSyncExternalStore, type FocusEventHandler } from 'react';
 import { createInputBehavior, type ValidationRule } from '@leslielee888888/core';
 import styles from './Input.module.css';
 
@@ -36,29 +30,20 @@ export function Input({
     [disabled, rules, defaultValue, onValueChange]
   );
 
-  // In uncontrolled mode, `core`'s behavior stores the live text value in a
-  // private closure variable rather than in `getState()`'s snapshot, so
-  // `useSyncExternalStore` can't detect the change. Force a re-render on every
-  // store notification instead, which causes `getInputProps` to be called
-  // again below and pick up the new closure value.
-  const [, forceRerender] = useReducer((c: number) => c + 1, 0);
-  useEffect(() => behavior.subscribe(forceRerender), [behavior]);
+  // Value now lives in core's own store — see createInputBehavior.ts for
+  // why. The snapshot itself isn't used directly below (getInputProps(value)
+  // resolves the current value itself); this call exists purely to
+  // subscribe this component to the store's changes.
+  useSyncExternalStore(behavior.subscribe, behavior.getState);
 
   const behaviorProps = behavior.getInputProps(value);
-
-  const handleChange: ChangeEventHandler<HTMLInputElement> = (event) => {
-    behaviorProps.onChange({ target: { value: event.target.value } });
-  };
 
   return (
     <input
       type="text"
       className={styles.input}
       placeholder={placeholder}
-      disabled={behaviorProps.disabled}
-      value={behaviorProps.value}
-      aria-invalid={behaviorProps['aria-invalid']}
-      onChange={handleChange}
+      {...behaviorProps}
       onFocus={(event) => {
         behaviorProps.onFocus();
         onFocus?.(event);

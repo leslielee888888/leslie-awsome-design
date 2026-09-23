@@ -12,6 +12,9 @@ export function createButtonBehavior(config: ButtonConfig = {}) {
     getButtonProps: (): ButtonProps => ({
       disabled: !isInteractive(),
       'aria-busy': config.loading || undefined,
+      onClick: () => {
+        if (isInteractive()) config.onClick?.();
+      },
       onPointerDown: () => {
         if (isInteractive()) store.setState({ pressed: true });
       },

@@ -3,12 +3,16 @@ import { createStore } from '../../utilities/createStore';
 import type { InputConfig, InputState, InputProps } from '../../types';
 
 export function createInputBehavior(config: InputConfig = {}) {
-  let internalValue = config.defaultValue ?? '';
   const rules = config.rules ?? [];
-  const store = createStore<InputState>({ focused: false });
+  const store = createStore<InputState>({ focused: false, value: config.defaultValue ?? '' });
 
+  // The uncontrolled value now lives in the store itself (not a separate
+  // closure variable) specifically so getState()'s snapshot is complete —
+  // a consumer using useSyncExternalStore(subscribe, getState) sees the
+  // real current value and re-renders correctly on every change, instead
+  // of the store notifying with no observable difference in the snapshot.
   const resolveValue = (liveValue?: string): string =>
-    liveValue !== undefined ? liveValue : internalValue;
+    liveValue !== undefined ? liveValue : store.getState().value;
 
   return {
     getState: store.getState,
@@ -24,8 +28,7 @@ export function createInputBehavior(config: InputConfig = {}) {
         onChange: (event: { target: { value: string } }) => {
           const next = event.target.value;
           if (!isControlled) {
-            internalValue = next;
-            store.notify();
+            store.setState({ value: next });
           }
           config.onValueChange?.(next);
         },
