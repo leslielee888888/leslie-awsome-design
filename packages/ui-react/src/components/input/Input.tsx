@@ -1,12 +1,8 @@
-import {
-  useEffect,
-  useMemo,
-  useReducer,
-  type ChangeEventHandler,
-  type FocusEventHandler,
-} from 'react';
-import { createInputBehavior, type ValidationRule } from '@leslielee888888/core';
+import { useState, type ChangeEventHandler, type FocusEventHandler } from 'react';
+import { validate, type ValidationRule } from '../../utilities/validate';
 import styles from './Input.module.css';
+
+export type { ValidationRule };
 
 export interface InputProps {
   value?: string;
@@ -19,6 +15,11 @@ export interface InputProps {
   onBlur?: FocusEventHandler<HTMLInputElement>;
 }
 
+// Plain component: controlled/uncontrolled value handling and disabled/
+// validation state are all things a native `<input>` + `useState` already
+// handle -- no `core` behavior object involved. `rules` validation runs
+// through a local pure-function helper (`../../utilities/validate`) instead
+// of `core`'s -- see the PinInput + frameworks architecture design spec §4.
 export function Input({
   value,
   defaultValue,
@@ -29,25 +30,17 @@ export function Input({
   onFocus,
   onBlur,
 }: InputProps) {
-  // Config is set once, at creation; `value` is live, per-render data passed
-  // as a function argument to getInputProps below (core/README.md "Pattern").
-  const behavior = useMemo(
-    () => createInputBehavior({ disabled, rules, defaultValue, onValueChange }),
-    [disabled, rules, defaultValue, onValueChange]
-  );
-
-  // In uncontrolled mode, `core`'s behavior stores the live text value in a
-  // private closure variable rather than in `getState()`'s snapshot, so
-  // `useSyncExternalStore` can't detect the change. Force a re-render on every
-  // store notification instead, which causes `getInputProps` to be called
-  // again below and pick up the new closure value.
-  const [, forceRerender] = useReducer((c: number) => c + 1, 0);
-  useEffect(() => behavior.subscribe(forceRerender), [behavior]);
-
-  const behaviorProps = behavior.getInputProps(value);
+  const isControlled = value !== undefined;
+  const [internalValue, setInternalValue] = useState(defaultValue ?? '');
+  const currentValue = isControlled ? value : internalValue;
+  const result = validate(currentValue, rules ?? []);
 
   const handleChange: ChangeEventHandler<HTMLInputElement> = (event) => {
-    behaviorProps.onChange({ target: { value: event.target.value } });
+    const next = event.target.value;
+    if (!isControlled) {
+      setInternalValue(next);
+    }
+    onValueChange?.(next);
   };
 
   return (
@@ -55,18 +48,12 @@ export function Input({
       type="text"
       className={styles.input}
       placeholder={placeholder}
-      disabled={behaviorProps.disabled}
-      value={behaviorProps.value}
-      aria-invalid={behaviorProps['aria-invalid']}
+      disabled={disabled}
+      value={currentValue}
+      aria-invalid={!result.isValid || undefined}
       onChange={handleChange}
-      onFocus={(event) => {
-        behaviorProps.onFocus();
-        onFocus?.(event);
-      }}
-      onBlur={(event) => {
-        behaviorProps.onBlur();
-        onBlur?.(event);
-      }}
+      onFocus={onFocus}
+      onBlur={onBlur}
     />
   );
 }
