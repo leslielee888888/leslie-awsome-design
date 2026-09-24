@@ -315,10 +315,10 @@ importers:
   packages/ui-react:
     dependencies:
       '@leslielee888888/core':
-        specifier: workspace:^0.2.0
+        specifier: workspace:^1.0.0
         version: link:../core
       '@leslielee888888/frameworks-react':
-        specifier: workspace:^0.1.0
+        specifier: workspace:^0.2.0
         version: link:../frameworks/react
       '@leslielee888888/tokens':
         specifier: workspace:^0.2.0
