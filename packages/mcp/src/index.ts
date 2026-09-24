@@ -117,6 +117,16 @@ export function startServer(
       void transport?.close();
       void server.close();
     });
+    // Without this, an attempted write on an already-broken connection (the `closed`
+    // check above narrows this window but can't close it entirely - Node's 'close' and
+    // 'error' events aren't guaranteed to interleave with this handler's awaits in any
+    // fixed order) would be an unhandled 'error' event, capable of crashing this
+    // long-lived, shared NAS process outright. An 'error' listener - even one that only
+    // logs - is what makes Node treat the error as handled instead.
+    res.on('error', (error) => {
+      closed = true;
+      console.error('Response stream error:', error);
+    });
     try {
       transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
       await server.connect(transport);

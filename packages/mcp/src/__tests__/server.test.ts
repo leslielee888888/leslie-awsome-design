@@ -225,17 +225,26 @@ describe('MCP server Host-header allow-list (LAN reachability, not just 127.0.0.
   });
 });
 
-describe('MCP server client-abort handling (regression: res.on("close") racing the in-flight request)', () => {
-  it('survives a client dropping the connection mid-request, without an unhandled exception, and stays responsive to the next request', async () => {
+describe('MCP server client-abort handling', () => {
+  it('survives a client disconnecting after sending a full request but before reading the response, and stays responsive to the next request', async () => {
+    // What this test can and can't prove: it verifies the server doesn't crash and
+    // stays healthy when a client vanishes after its request reaches the handler.
+    // It does NOT reliably force the exact race the res.on('error') fix in
+    // ../index.ts guards against - a disconnect landing in the specific window
+    // where `server.connect`/`transport.handleRequest` are still pending - since
+    // that window is sub-millisecond on a local, stateless request and isn't
+    // forceable through the public HTTP interface (confirmed while writing this:
+    // destroying the socket immediately after `req.write`, before `req.end()`,
+    // aborted the connection before Express's body parser even finished reading
+    // it, so the route handler - and its res.on('close')/res.on('error') logic -
+    // never ran at all). `req.end()` first, then destroying on a later tick, at
+    // least guarantees the full request reaches the server and the handler starts;
+    // the production res.on('error') listener is what actually closes the race
+    // this test can only approximate.
     const httpServer = await startServer(0);
     try {
       const { port } = httpServer.address() as AddressInfo;
 
-      // Fires the same `res.on('close', ...)` cleanup path an aborted client triggers -
-      // whether or not it lands exactly mid-`connect`/`handleRequest` depends on timing,
-      // but destroying the socket immediately after writing (not waiting for a response)
-      // maximizes the chance of it, and the assertions below hold either way: no crash,
-      // and the server keeps working afterward.
       const payload = JSON.stringify({
         jsonrpc: '2.0',
         id: 1,
@@ -260,11 +269,18 @@ describe('MCP server client-abort handling (regression: res.on("close") racing t
       req.on('error', () => {
         // Expected - destroying our own request legitimately errors it (ECONNRESET-style).
       });
-      req.write(payload);
+      await new Promise<void>((resolve) => {
+        req.end(payload, () => resolve());
+      });
+      // One tick after the client finished sending, so the server has a real chance
+      // to receive/parse the body and enter the route handler before we cut it off -
+      // not a guarantee of landing mid-await, just better than destroying before the
+      // body was even fully sent.
+      await new Promise((resolve) => setImmediate(resolve));
       req.destroy();
 
-      // Give the server a tick to process the abort's 'close' event before asserting
-      // it's still healthy - a crashed process would fail this next real request outright.
+      // Give the server a tick to process the abort before asserting it's still
+      // healthy - a crashed process would fail this next real request outright.
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       const { status, body } = await postInitialize(port, '127.0.0.1');
