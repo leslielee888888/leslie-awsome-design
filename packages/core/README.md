@@ -36,7 +36,10 @@ uses for its own hooks. `utilities/` holds framework- and
 component-agnostic helpers used by one or more behaviors: `createStore`
 (the state + `subscribe`/`notify` mechanism every behavior is built on)
 and `validate` (a plain value → error-message function; not tied to any
-behavior — `ui-react`'s `Input` calls it directly).
+behavior). `ui-react`'s `Input` deliberately does **not** call this —
+it has its own local copy (`ui-react/src/utilities/validate.ts`) instead,
+since validation isn't stateful interaction and doesn't need `core` at all
+(same principle that removed `core` from Button/Card/Badge entirely).
 
 ## Pattern
 

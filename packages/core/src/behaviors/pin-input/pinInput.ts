@@ -15,12 +15,32 @@ const isValidChar = (char: string, type: NonNullable<PinInputProps['type']>): bo
 const isComplete = (values: string[]): boolean =>
   values.length > 0 && values.every((value) => value !== '');
 
+type PinInputLive = Pick<PinInputProps, 'disabled' | 'invalid' | 'type'>;
+
 export function pinInput(initialProps: PinInputProps): {
   getState: () => PinInputState;
   subscribe: (listener: () => void) => () => void;
   setGetProp: (getProp: GetProp<PinInputProps>) => void;
-  getRootProps: () => PinInputRootProps;
-  getInputProps: (part: { index: number }) => PinInputBoxProps;
+  /**
+   * Resizes the internal `values` array to match a new `length`. Separate
+   * from `setGetProp` (which only ever needs to run once, on mount, since
+   * the accessor it installs stays live on its own) — this needs to run
+   * every time `length` actually changes, which `PinInput.Root` does via its
+   * own effect. Not called automatically from `setGetProp`: the constructor
+   * already sizes `values` correctly from `initialProps.length`.
+   */
+  setLength: (length: number) => void;
+  // `live` is optional: real React usage (PinInput.Root/.Input) always
+  // passes it, reading these fields directly from the current render's own
+  // props rather than through `getProp` — getProp's ref-backed accessor is
+  // only updated in a post-commit effect, so a value read through it
+  // *synchronously during render* (exactly what calling getRootProps() in
+  // JSX does) is one render behind whenever a caller's own re-render is what
+  // changed these fields. core's own tests, which call these directly with
+  // no React/render timing involved at all, can omit `live` and fall back to
+  // getProp safely, since there's no staleness to have in a plain JS call.
+  getRootProps: (live?: Pick<PinInputLive, 'disabled' | 'invalid'>) => PinInputRootProps;
+  getInputProps: (part: { index: number }, live?: PinInputLive) => PinInputBoxProps;
 } {
   // Seeded from the render that creates this behavior — a real consumer
   // (PinInput.Root) calls getRootProps() synchronously in that same render,
@@ -56,20 +76,50 @@ export function pinInput(initialProps: PinInputProps): {
     store.setState({ focusedIndex: index });
   };
 
+  // Shared by handleChange's multi-char branch and handlePaste: fills boxes
+  // from `startIndex` with `chars`, truncating at the last box, and moves
+  // focus to the first empty box after the filled range (or the last box).
+  const distributeChars = (startIndex: number, chars: string[]): void => {
+    const values = [...store.getState().values];
+    const length = values.length;
+    let lastFilledIndex = startIndex - 1;
+    for (let offset = 0; offset < chars.length && startIndex + offset < length; offset += 1) {
+      values[startIndex + offset] = chars[offset];
+      lastFilledIndex = startIndex + offset;
+    }
+    commitValues(values);
+    const nextEmptyIndex = values.findIndex((value, i) => i > lastFilledIndex && value === '');
+    moveFocus(nextEmptyIndex !== -1 ? nextEmptyIndex : Math.min(lastFilledIndex, length - 1));
+  };
+
   const handleChange = (index: number, rawValue: string): void => {
     if (getProp('disabled')) return;
-    // A native single-char box reports its whole new value; take the last
-    // character so retyping over an already-filled box still works.
-    const char = rawValue.slice(-1);
     const values = store.getState().values;
-    if (char === '') {
+    if (rawValue === '') {
       if (values[index] === '') return;
       const next = [...values];
       next[index] = '';
       commitValues(next);
       return;
     }
-    if (!isValidChar(char, currentType())) return;
+    const type = currentType();
+    // A browser/OS autofill (e.g. an SMS one-time code) can deliver the
+    // whole code in a single change event, not one character at a time the
+    // way typing does — distribute it across boxes like a paste, instead of
+    // silently keeping only the last character. Distinguished from "typed a
+    // second character over an already-filled box without clearing it
+    // first" (a native single-char box then reports old+new as a 2-char
+    // value) by checking whether the first character matches what was
+    // already there: if so, it's a manual overwrite, not an autofill.
+    const isManualOverwrite = rawValue.length === 2 && rawValue[0] === values[index];
+    if (rawValue.length > 1 && !isManualOverwrite) {
+      const chars = rawValue.split('').filter((char) => isValidChar(char, type));
+      if (chars.length === 0) return;
+      distributeChars(index, chars);
+      return;
+    }
+    const char = rawValue.slice(-1);
+    if (!isValidChar(char, type)) return;
     const next = [...values];
     next[index] = char;
     commitValues(next);
@@ -130,18 +180,15 @@ export function pinInput(initialProps: PinInputProps): {
     const type = currentType();
     const chars = raw.split('').filter((char) => isValidChar(char, type));
     if (chars.length === 0) return;
+    distributeChars(index, chars);
+  };
 
-    const values = [...store.getState().values];
-    const length = values.length;
-    let lastFilledIndex = index - 1;
-    for (let offset = 0; offset < chars.length && index + offset < length; offset += 1) {
-      values[index + offset] = chars[offset];
-      lastFilledIndex = index + offset;
+  const resizeTo = (length: number): void => {
+    const current = store.getState().values;
+    if (current.length !== length) {
+      const next = Array.from({ length }, (_, i) => current[i] ?? '');
+      store.setState({ values: next, complete: isComplete(next) });
     }
-    commitValues(values);
-
-    const nextEmptyIndex = values.findIndex((value, i) => i > lastFilledIndex && value === '');
-    moveFocus(nextEmptyIndex !== -1 ? nextEmptyIndex : Math.min(lastFilledIndex, length - 1));
   };
 
   return {
@@ -149,34 +196,35 @@ export function pinInput(initialProps: PinInputProps): {
     subscribe: store.subscribe,
     setGetProp: (nextGetProp) => {
       getProp = nextGetProp;
-      const length = nextGetProp('length');
-      const current = store.getState().values;
-      if (current.length !== length) {
-        const next = Array.from({ length }, (_, i) => current[i] ?? '');
-        store.setState({ values: next, complete: isComplete(next) });
-      }
     },
-    getRootProps: (): PinInputRootProps => ({
-      role: 'group',
-      'data-scope': 'pin-input',
-      'data-part': 'root',
-      'data-disabled': getProp('disabled') ? true : undefined,
-      'data-invalid': getProp('invalid') ? true : undefined,
-      'data-complete': store.getState().complete ? true : undefined,
-    }),
-    getInputProps: ({ index }): PinInputBoxProps => {
+    setLength: resizeTo,
+    getRootProps: (live): PinInputRootProps => {
+      const disabled = live?.disabled ?? getProp('disabled');
+      const invalid = live?.invalid ?? getProp('invalid');
+      return {
+        role: 'group',
+        'data-scope': 'pin-input',
+        'data-part': 'root',
+        'data-disabled': disabled ? true : undefined,
+        'data-invalid': invalid ? true : undefined,
+        'data-complete': store.getState().complete ? true : undefined,
+      };
+    },
+    getInputProps: ({ index }, live): PinInputBoxProps => {
       const state = store.getState();
-      const type = currentType();
+      const disabled = live?.disabled ?? getProp('disabled');
+      const invalid = live?.invalid ?? getProp('invalid');
+      const type = live?.type ?? getProp('type') ?? 'numeric';
       return {
         type: 'text',
         inputMode: type === 'numeric' ? 'numeric' : 'text',
         value: state.values[index] ?? '',
-        disabled: getProp('disabled') ? true : undefined,
+        disabled: disabled ? true : undefined,
         'data-scope': 'pin-input',
         'data-part': 'input',
         'data-index': index,
-        'data-disabled': getProp('disabled') ? true : undefined,
-        'data-invalid': getProp('invalid') ? true : undefined,
+        'data-disabled': disabled ? true : undefined,
+        'data-invalid': invalid ? true : undefined,
         'data-complete': state.complete ? true : undefined,
         onChange: (event) => handleChange(index, event.target.value),
         onKeyDown: (event) => handleKeyDown(index, event),

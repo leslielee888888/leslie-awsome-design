@@ -73,6 +73,38 @@ describe('pinInput', () => {
     });
   });
 
+  describe('multi-character onChange (autofill)', () => {
+    it('splits a full autofilled code across boxes, like a paste', () => {
+      // A browser/OS delivering an SMS one-time code can fire one onChange
+      // with the whole value, not one keystroke per box.
+      const behavior = setup({ length: 4 });
+      behavior.getInputProps({ index: 0 }).onChange({ target: { value: '1234' } });
+      expect(behavior.getState().values).toEqual(['1', '2', '3', '4']);
+    });
+
+    it('starts the autofill split at the focused index', () => {
+      const behavior = setup({ length: 5 });
+      behavior.getInputProps({ index: 2 }).onChange({ target: { value: '123' } });
+      expect(behavior.getState().values).toEqual(['', '', '1', '2', '3']);
+    });
+
+    it('still treats retyping over an already-filled box as a manual overwrite, not autofill', () => {
+      // Native single-char boxes report old+new as a 2-char value when a
+      // second key is pressed without clearing first -- this must stay a
+      // simple overwrite of that one box, not a split across boxes.
+      const behavior = setup({ length: 4 });
+      behavior.getInputProps({ index: 0 }).onChange({ target: { value: '5' } });
+      behavior.getInputProps({ index: 0 }).onChange({ target: { value: '57' } }); // old '5' + new '7'
+      expect(behavior.getState().values).toEqual(['7', '', '', '']);
+    });
+
+    it('filters non-digit characters out of a numeric autofill', () => {
+      const behavior = setup({ length: 4, type: 'numeric' });
+      behavior.getInputProps({ index: 0 }).onChange({ target: { value: '1a2b' } });
+      expect(behavior.getState().values).toEqual(['1', '2', '', '']);
+    });
+  });
+
   describe('backspace-to-previous', () => {
     it('just clears the current box when it is non-empty', () => {
       const behavior = setup({ length: 3 });
@@ -338,6 +370,56 @@ describe('pinInput', () => {
       unsubscribe();
       behavior.getInputProps({ index: 0 }).onKeyDown(keydown('Backspace'));
       expect(calls).toBe(1);
+    });
+  });
+
+  describe('setLength', () => {
+    it('resizes the values array, preserving existing entries', () => {
+      const behavior = setup({ length: 3 });
+      behavior.getInputProps({ index: 0 }).onChange({ target: { value: '1' } });
+      behavior.setLength(5);
+      expect(behavior.getState().values).toEqual(['1', '', '', '', '']);
+    });
+
+    it('is a no-op when the length is unchanged', () => {
+      const behavior = setup({ length: 3 });
+      behavior.getInputProps({ index: 0 }).onChange({ target: { value: '1' } });
+      const before = behavior.getState().values;
+      behavior.setLength(3);
+      expect(behavior.getState().values).toBe(before); // same array reference — no unnecessary update
+    });
+
+    it('recomputes complete when shrinking makes every remaining box filled', () => {
+      const behavior = setup({ length: 3 });
+      behavior.getInputProps({ index: 0 }).onChange({ target: { value: '1' } });
+      behavior.setLength(1);
+      expect(behavior.getState()).toMatchObject({ values: ['1'], complete: true });
+    });
+  });
+
+  describe('live argument to getRootProps/getInputProps', () => {
+    // Real React usage (PinInput.Root/.Input) passes `live` explicitly,
+    // reading straight from the current render's props rather than through
+    // `getProp` — see the doc comment on `pinInput`'s return type for why
+    // (getProp's ref-backed accessor is only fresh in effects/handlers, not
+    // synchronously during render, which is exactly when getRootProps()/
+    // getInputProps() are actually called by a real consumer).
+    it('overrides getProp when provided, without needing setGetProp called again', () => {
+      const behavior = setup({ length: 3, disabled: false, invalid: false });
+      // getProp still reports the original (stale, in a real render sense)
+      // config, but `live` -- exactly what PinInput.Root would pass from its
+      // own current props -- takes priority.
+      expect(behavior.getRootProps({ disabled: true, invalid: true })).toMatchObject({
+        'data-disabled': true,
+        'data-invalid': true,
+      });
+      expect(behavior.getInputProps({ index: 0 }, { disabled: true }).disabled).toBe(true);
+    });
+
+    it("falls back to getProp when live is omitted (the pattern core's own tests use)", () => {
+      const behavior = setup({ length: 3, disabled: true });
+      expect(behavior.getRootProps()['data-disabled']).toBe(true);
+      expect(behavior.getInputProps({ index: 0 }).disabled).toBe(true);
     });
   });
 });

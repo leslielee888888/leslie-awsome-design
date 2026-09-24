@@ -124,6 +124,43 @@ describe('PinInput', () => {
     boxes.forEach((box) => expect(box).toHaveAttribute('data-invalid'));
   });
 
+  it('reflects disabled/invalid immediately on the render that changes them, not one render later', () => {
+    // Regression test: an earlier version read disabled/invalid through
+    // behavior's ref-backed getProp synchronously during render -- correct
+    // for the render that first wires it up, but one render *behind*
+    // afterward, since the ref is only updated in a post-commit effect that
+    // hasn't run yet by the time this exact render's own getRootProps()/
+    // getInputProps() calls execute. Flipping disabled here and checking the
+    // DOM immediately after rerender() (no extra render, no waitFor) is
+    // exactly the case that was broken.
+    const { rerender } = renderPinInput({ length: 2, disabled: false, invalid: false });
+    let boxes = screen.getAllByRole<HTMLInputElement>('textbox');
+    expect(boxes[0]).not.toBeDisabled();
+    expect(screen.getByRole('group')).not.toHaveAttribute('data-disabled');
+
+    rerender(
+      <PinInput.Root length={2} disabled invalid>
+        <Boxes length={2} />
+      </PinInput.Root>
+    );
+
+    boxes = screen.getAllByRole<HTMLInputElement>('textbox');
+    expect(boxes[0]).toBeDisabled();
+    expect(boxes[0]).toHaveAttribute('data-invalid');
+    expect(screen.getByRole('group')).toHaveAttribute('data-disabled');
+    expect(screen.getByRole('group')).toHaveAttribute('data-invalid');
+  });
+
+  it('disables the hidden input too, so it cannot submit while the group is disabled', () => {
+    render(
+      <PinInput.Root length={2} disabled>
+        <Boxes length={2} />
+        <PinInput.HiddenInput name="otp" />
+      </PinInput.Root>
+    );
+    expect(document.querySelector('input[name="otp"]')).toBeDisabled();
+  });
+
   it('sets data-complete on every box once all boxes are filled, and fires onComplete once', () => {
     const onComplete = vi.fn();
     renderPinInput({ length: 2, onComplete });
