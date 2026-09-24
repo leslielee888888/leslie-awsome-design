@@ -3,3 +3,6 @@ dist/
 .build-src/
 .scratch-css-test/
 .git/
+.env
+.env.*
+!.env.example

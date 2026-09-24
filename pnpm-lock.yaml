@@ -253,12 +253,6 @@ importers:
 
   packages/mcp:
     dependencies:
-      '@leslielee888888/core':
-        specifier: workspace:*
-        version: link:../core
-      '@leslielee888888/tokens':
-        specifier: workspace:*
-        version: link:../tokens
       '@modelcontextprotocol/sdk':
         specifier: ^1.30.0
         version: 1.30.0(zod@4.6.5)
@@ -266,6 +260,12 @@ importers:
         specifier: ^4.6.5
         version: 4.6.5
     devDependencies:
+      '@leslielee888888/core':
+        specifier: workspace:*
+        version: link:../core
+      '@leslielee888888/tokens':
+        specifier: workspace:*
+        version: link:../tokens
       '@types/express':
         specifier: ^5.0.6
         version: 5.0.6
