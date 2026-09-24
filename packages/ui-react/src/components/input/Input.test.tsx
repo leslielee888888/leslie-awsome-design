@@ -52,6 +52,29 @@ describe('Input', () => {
     expect(screen.getByRole('textbox')).not.toHaveAttribute('aria-invalid');
   });
 
+  it('validates against the live controlled value, not a stale internal snapshot', () => {
+    // The deleted createInputBehavior.test.ts explicitly covered this case;
+    // it wasn't replicated when Input moved to a plain useState-based
+    // implementation. Guards against validation ever reading internalValue
+    // instead of the actual controlled `value` prop.
+    function Controlled() {
+      const [value, setValue] = useState('ok');
+      return (
+        <Input
+          value={value}
+          onValueChange={setValue}
+          rules={[{ type: 'required', message: 'Required' }]}
+        />
+      );
+    }
+    render(<Controlled />);
+    const input = screen.getByRole('textbox');
+    expect(input).not.toHaveAttribute('aria-invalid');
+
+    fireEvent.change(input, { target: { value: '' } });
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+  });
+
   it('actually displays typed characters in uncontrolled mode (not just firing the callback)', () => {
     render(<Input />);
     const input = screen.getByRole<HTMLInputElement>('textbox');

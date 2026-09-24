@@ -35,4 +35,18 @@ describe('Button', () => {
     render(<Button loading>Click me</Button>);
     expect(screen.getByRole('button')).toHaveAttribute('aria-busy', 'true');
   });
+
+  it('is disabled when loading is true, even without the disabled prop', () => {
+    // Locks down `disabled={disabled || loading}` specifically -- the
+    // deleted createButtonBehavior.test.ts covered loading-only and
+    // disabled-only as distinct cases; not replicated when Button moved to
+    // a plain component.
+    render(<Button loading>Click me</Button>);
+    expect(screen.getByRole('button')).toBeDisabled();
+  });
+
+  it('does not set aria-busy when only disabled (not loading)', () => {
+    render(<Button disabled>Click me</Button>);
+    expect(screen.getByRole('button')).not.toHaveAttribute('aria-busy');
+  });
 });

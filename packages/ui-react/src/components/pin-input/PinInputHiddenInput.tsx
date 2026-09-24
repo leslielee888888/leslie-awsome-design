@@ -16,13 +16,14 @@ export interface PinInputHiddenInputProps {
 // return a stale snapshot on every render after the first, since nothing
 // here would trigger a re-render on its own.
 export function HiddenInput({ name }: PinInputHiddenInputProps = {}) {
-  const behavior = usePinInputContext();
+  const { behavior, live } = usePinInputContext();
   const state = useBehaviorState(behavior);
 
   return (
     <input
       type="text"
       name={name}
+      disabled={live.disabled}
       className={styles.hiddenInput}
       aria-hidden="true"
       tabIndex={-1}

@@ -15,7 +15,7 @@ export interface PinInputInputProps {
 // selector, since `core` doesn't expose a per-box "filled" data attribute
 // (only the whole-group `data-complete`) -- see PinInput.module.css.
 export function Input({ index }: PinInputInputProps) {
-  const behavior = usePinInputContext();
+  const { behavior, live } = usePinInputContext();
   const ref = useRef<HTMLInputElement>(null);
 
   // Only `PinInput.Root` calls `useBehavior` directly. `PinInput.Input`
@@ -29,7 +29,11 @@ export function Input({ index }: PinInputInputProps) {
   const state = useBehaviorState(behavior);
   const isFocused = state.focusedIndex === index;
 
-  const boxProps = behavior.getInputProps({ index });
+  // `live` (disabled/invalid/type) comes from context, sourced from Root's
+  // own current props -- not read through `behavior`'s getProp, which is
+  // only fresh in effects/handlers, one render behind if read synchronously
+  // during render the way this call is. See PinInputContext.ts.
+  const boxProps = behavior.getInputProps({ index }, live);
 
   // `pinInput` tracks which box should have focus (auto-advance,
   // backspace-to-previous, arrow-key nav) in `state.focusedIndex`, but
