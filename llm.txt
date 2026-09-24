@@ -1,0 +1,36 @@
+# leslie-awsome-design (LAD)
+
+Leslie's personal design system — DTCG design tokens, framework-agnostic
+component behavior, a React binding layer, and an MCP server exposing all
+of it for AI coding agents to discover programmatically instead of a human
+pasting token values or prop shapes into a prompt.
+
+pnpm workspace, packages under `packages/`:
+
+- **`tokens`** (`@leslielee888888/tokens`) — DTCG-format JSON design tokens
+  (color, spacing, radius, typography, shadow), sourced from Figma.
+  See [`packages/tokens/README.md`](packages/tokens/README.md).
+- **`core`** (`@leslielee888888/core`) — zero-dependency, framework-agnostic
+  interaction logic for components with genuine stateful interaction (e.g.
+  `pin-input`). See [`packages/core/README.md`](packages/core/README.md).
+- **`frameworks/react`** (`@leslielee888888/frameworks-react`) — React
+  plumbing (`useBehavior`, `createBehaviorContext`) for wiring a `core`-style
+  behavior into React. See
+  [`packages/frameworks/react/README.md`](packages/frameworks/react/README.md).
+- **`ui-react`** (`@leslielee888888/ui-react`) — the actual React component
+  library (Button, Input, Card, Badge, PinInput), built on `core` +
+  `frameworks/react` + `tokens`, with Storybook (`pnpm --filter ui-react
+  storybook`) for visual development.
+- **`mcp`** (`@leslielee888888/mcp`, never published — runs as a container)
+  — an MCP server exposing `tokens`' DTCG data and a generated manifest of
+  `core`'s behaviors, so an agent can query "what tokens/components exist
+  and what do they look like" without reading source. See
+  [`packages/mcp/README.md`](packages/mcp/README.md).
+
+## Reaching the MCP server
+
+Streamable HTTP, deployed on Leslie's NAS (LAN-only, no auth — see
+`packages/mcp/README.md` for the connection URL and current host). It
+exposes two resources (`tokens://`, `components://manifest`) and two tools
+(`get_token(path)`, `get_component(name)`); full detail in
+`packages/mcp/README.md`.

@@ -4,19 +4,21 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "tsup",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "generate-manifest": "tsx scripts/generate-manifest.ts"
   },
   "dependencies": {
-    "@leslielee888888/core": "workspace:*",
-    "@leslielee888888/tokens": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@leslielee888888/core": "workspace:*",
+    "@leslielee888888/tokens": "workspace:*",
     "@types/express": "^5.0.6",
     "ts-morph": "^28.0.0",
+    "tsup": "^8.5.1",
     "tsx": "^4.23.15",
     "typescript": "^5.6.3",
     "vitest": "^2.1.4"
