@@ -17,11 +17,19 @@ one at `packages/frameworks/vue` (`@leslielee888888/frameworks-vue`).
   `setGetProp` inside its own `useLayoutEffect`, and subscribes the caller to
   the behavior's store with `useSyncExternalStore` so it re-renders on store
   changes.
-- **`createBehaviorContext<TBehavior>()`** — returns `{ Provider,
+- **`createBehaviorContext<TBehavior>(rootName)`** — returns `{ Provider,
 useBehaviorContext }` for sharing a behavior with descendant components.
-  `useBehaviorContext(componentName)` throws
-  `` `${componentName} must be used within its Root` `` when called with no
-  `Provider` above it in the tree.
+  `rootName` is passed once, here, not by every descendant part at every call
+  site — `useBehaviorContext()` (no arguments) throws
+  `` `${rootName} components must be used within a <${rootName}.Root>` ``
+  when called with no `Provider` above it in the tree. Scales to any number
+  of parts without needing a name defined for each one.
+- **`useBehaviorState(behavior)`** — subscribes to a behavior's store and
+  returns the current state snapshot (a thin `useSyncExternalStore` wrapper).
+  Only whichever part calls `useBehavior` gets a subscription for free; every
+  other part of a compound component (consumer-authored `children`, not
+  re-rendered when the behavior's own caller re-renders) needs this to avoid
+  rendering stale state.
 
 `useLiveRef` (a ref kept fresh via `useLayoutEffect`, written at commit time
 rather than during render) is an internal helper used by `useBehavior` and is
@@ -40,7 +48,8 @@ with their failure modes explained there.
 import { useBehavior, createBehaviorContext } from '@leslielee888888/frameworks-react';
 import { pinInput } from '@leslielee888888/core';
 
-const { Provider, useBehaviorContext } = createBehaviorContext<ReturnType<typeof pinInput>>();
+const { Provider, useBehaviorContext } =
+  createBehaviorContext<ReturnType<typeof pinInput>>('PinInput');
 
 function Root(props: PinInputRootProps) {
   const behavior = useBehavior(pinInput, props);
@@ -49,5 +58,10 @@ function Root(props: PinInputRootProps) {
       <div {...behavior.getRootProps()}>{props.children}</div>
     </Provider>
   );
+}
+
+function Input({ index }: { index: number }) {
+  const behavior = useBehaviorContext(); // no name needed here
+  return <input {...behavior.getInputProps({ index })} />;
 }
 ```

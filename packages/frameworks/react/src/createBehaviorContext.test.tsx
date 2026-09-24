@@ -8,10 +8,10 @@ interface FakeBehavior {
 
 describe('createBehaviorContext', () => {
   it('throws when useBehaviorContext is called outside its Provider', () => {
-    const { useBehaviorContext } = createBehaviorContext<FakeBehavior>();
+    const { useBehaviorContext } = createBehaviorContext<FakeBehavior>('TestComponent');
 
     function Consumer() {
-      useBehaviorContext('TestComponent.Consumer');
+      useBehaviorContext();
       return null;
     }
 
@@ -20,7 +20,7 @@ describe('createBehaviorContext', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
       expect(() => render(<Consumer />)).toThrow(
-        'TestComponent.Consumer must be used within its Root'
+        'TestComponent components must be used within a <TestComponent.Root>'
       );
     } finally {
       consoleError.mockRestore();
@@ -28,11 +28,11 @@ describe('createBehaviorContext', () => {
   });
 
   it('returns the provided value when rendered within its Provider', () => {
-    const { Provider, useBehaviorContext } = createBehaviorContext<FakeBehavior>();
+    const { Provider, useBehaviorContext } = createBehaviorContext<FakeBehavior>('TestComponent');
     let received: FakeBehavior | undefined;
 
     function Consumer() {
-      received = useBehaviorContext('TestComponent.Consumer');
+      received = useBehaviorContext();
       return null;
     }
 

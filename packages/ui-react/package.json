@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@leslielee888888/core": "workspace:^0.2.0",
+    "@leslielee888888/frameworks-react": "workspace:^0.1.0",
     "@leslielee888888/tokens": "workspace:^0.2.0"
   },
   "scripts": {

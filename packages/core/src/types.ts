@@ -42,6 +42,15 @@ export interface PinInputBoxProps {
   type: 'text';
   inputMode: 'numeric' | 'text';
   value: string;
+  /**
+   * A real native `disabled`, not just `data-disabled` — the browser already
+   * blocks focus, click, keyboard and paste for free on a disabled `<input>`,
+   * which is exactly the "let HTML do it" principle this package exists for.
+   * The `onChange`/`onKeyDown`/`onPaste`/arrow-key handlers below still check
+   * `disabled` themselves too, for correctness when called directly (as
+   * core's own tests do) rather than through a real rendered `<input>`.
+   */
+  disabled?: true;
   'data-scope': 'pin-input';
   'data-part': 'input';
   'data-index': number;

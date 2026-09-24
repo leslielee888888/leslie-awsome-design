@@ -171,6 +171,7 @@ export function pinInput(initialProps: PinInputProps): {
         type: 'text',
         inputMode: type === 'numeric' ? 'numeric' : 'text',
         value: state.values[index] ?? '',
+        disabled: getProp('disabled') ? true : undefined,
         'data-scope': 'pin-input',
         'data-part': 'input',
         'data-index': index,
