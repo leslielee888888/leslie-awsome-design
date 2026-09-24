@@ -1,0 +1,181 @@
+{
+  "pin-input": {
+    "config": {
+      "interfaceName": "PinInputProps",
+      "fields": [
+        {
+          "name": "length",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "type",
+          "type": "'numeric' | 'alphanumeric'",
+          "optional": true,
+          "default": "'numeric'"
+        },
+        {
+          "name": "disabled",
+          "type": "boolean",
+          "optional": true
+        },
+        {
+          "name": "invalid",
+          "type": "boolean",
+          "optional": true,
+          "description": "Consumer-supplied validation result — core has no concept of \"invalid\" itself."
+        },
+        {
+          "name": "onValueChange",
+          "type": "(value: string) => void",
+          "optional": true
+        },
+        {
+          "name": "onComplete",
+          "type": "(value: string) => void",
+          "optional": true
+        }
+      ]
+    },
+    "state": {
+      "interfaceName": "PinInputState",
+      "fields": [
+        {
+          "name": "values",
+          "type": "string[]",
+          "optional": false,
+          "description": "length === PinInputProps['length']; '' for an empty box."
+        },
+        {
+          "name": "focusedIndex",
+          "type": "number | null",
+          "optional": false
+        },
+        {
+          "name": "complete",
+          "type": "boolean",
+          "optional": false,
+          "description": "values.every(v => v !== ''), recomputed once per mutation, not per prop-getter call."
+        }
+      ]
+    },
+    "props": {
+      "root": {
+        "interfaceName": "PinInputRootProps",
+        "fields": [
+          {
+            "name": "role",
+            "type": "'group'",
+            "optional": false
+          },
+          {
+            "name": "data-scope",
+            "type": "'pin-input'",
+            "optional": false
+          },
+          {
+            "name": "data-part",
+            "type": "'root'",
+            "optional": false
+          },
+          {
+            "name": "data-disabled",
+            "type": "true",
+            "optional": true
+          },
+          {
+            "name": "data-invalid",
+            "type": "true",
+            "optional": true
+          },
+          {
+            "name": "data-complete",
+            "type": "true",
+            "optional": true
+          }
+        ]
+      },
+      "box": {
+        "interfaceName": "PinInputBoxProps",
+        "fields": [
+          {
+            "name": "type",
+            "type": "'text'",
+            "optional": false
+          },
+          {
+            "name": "inputMode",
+            "type": "'numeric' | 'text'",
+            "optional": false
+          },
+          {
+            "name": "value",
+            "type": "string",
+            "optional": false
+          },
+          {
+            "name": "disabled",
+            "type": "true",
+            "optional": true,
+            "description": "A real native `disabled`, not just `data-disabled` — the browser already blocks focus, click, keyboard and paste for free on a disabled `<input>`, which is exactly the \"let HTML do it\" principle this package exists for. The `onChange`/`onKeyDown`/`onPaste`/arrow-key handlers below still check `disabled` themselves too, for correctness when called directly (as core's own tests do) rather than through a real rendered `<input>`."
+          },
+          {
+            "name": "data-scope",
+            "type": "'pin-input'",
+            "optional": false
+          },
+          {
+            "name": "data-part",
+            "type": "'input'",
+            "optional": false
+          },
+          {
+            "name": "data-index",
+            "type": "number",
+            "optional": false
+          },
+          {
+            "name": "data-disabled",
+            "type": "true",
+            "optional": true
+          },
+          {
+            "name": "data-invalid",
+            "type": "true",
+            "optional": true
+          },
+          {
+            "name": "data-complete",
+            "type": "true",
+            "optional": true
+          },
+          {
+            "name": "onChange",
+            "type": "(event: { target: { value: string } }) => void",
+            "optional": false
+          },
+          {
+            "name": "onKeyDown",
+            "type": "(event: { key: string; target: unknown }) => void",
+            "optional": false
+          },
+          {
+            "name": "onPaste",
+            "type": "(event: { clipboardData: { getData: (format: string) => string } }) => void",
+            "optional": false
+          },
+          {
+            "name": "onFocus",
+            "type": "() => void",
+            "optional": false
+          },
+          {
+            "name": "onBlur",
+            "type": "() => void",
+            "optional": false
+          }
+        ]
+      }
+    }
+  }
+}

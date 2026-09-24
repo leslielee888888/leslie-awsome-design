@@ -1,0 +1,12 @@
+services:
+  mcp:
+    build:
+      context: ../..
+      dockerfile: packages/mcp/Dockerfile
+    container_name: lad-mcp
+    restart: unless-stopped
+    ports:
+      - '${HOST_PORT:-3000}:3000'
+    environment:
+      PORT: 3000
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
