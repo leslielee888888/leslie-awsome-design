@@ -1,5 +1,6 @@
 import type { Server as HttpServer } from 'node:http';
 import { pathToFileURL } from 'node:url';
+import type { Request, Response } from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { createMcpExpressApp } from '@modelcontextprotocol/sdk/server/express.js';
@@ -39,6 +40,43 @@ function resolvePort(): number {
 }
 
 /**
+ * Reads the `ALLOWED_HOSTS` env var (comma-separated hostnames, e.g.
+ * `nas.local,192.168.1.20`) and returns it as a list, or `undefined` if unset/empty.
+ *
+ * `createMcpExpressApp()` defaults to a strict DNS-rebinding check that only accepts
+ * `Host: localhost|127.0.0.1|[::1]` - appropriate for a browser-reachable localhost dev
+ * server, but wrong here: this server is deployed to the NAS specifically to be reached
+ * over the LAN by name or IP (docs/prd/design-system-mcp.md §3), it is never called from a
+ * browser, and it is already intentionally unauthenticated (PRD "Out of scope": "trusts the
+ * LAN, matching how Leslie's other NAS-hosted services already work") - DNS rebinding isn't
+ * this server's threat model. The default (`ALLOWED_HOSTS` unset) still restricts to
+ * localhost, which is right for local dev; NAS/production deployment must set
+ * `ALLOWED_HOSTS` to the hostname(s)/IP the server is actually reached by, or every real
+ * LAN client gets a 403 "Invalid Host".
+ */
+function resolveAllowedHosts(): string[] | undefined {
+  const raw = process.env.ALLOWED_HOSTS;
+  if (!raw) {
+    return undefined;
+  }
+  const hosts = raw
+    .split(',')
+    .map((host) => host.trim())
+    .filter((host) => host.length > 0);
+  return hosts.length > 0 ? hosts : undefined;
+}
+
+export interface StartServerOptions {
+  /**
+   * Overrides the `ALLOWED_HOSTS` env var for this call - mainly for tests that need to
+   * exercise the allow-list without mutating `process.env`. Production/NAS deployment
+   * should configure this via the `ALLOWED_HOSTS` env var instead (see
+   * `resolveAllowedHosts`).
+   */
+  allowedHosts?: string[];
+}
+
+/**
  * Starts the MCP server on `port` (default: the `PORT` env var, falling back to 3000).
  * Streamable HTTP only - no stdio mode - since this runs as a shared, long-lived,
  * NAS-hosted process (docs/prd/design-system-mcp.md §3).
@@ -53,8 +91,12 @@ function resolvePort(): number {
  * listening, so callers (including tests) can read back the bound port via
  * `server.address()` - useful when `port` is 0 (an ephemeral port).
  */
-export function startServer(port: number = resolvePort()): Promise<HttpServer> {
-  const app = createMcpExpressApp();
+export function startServer(
+  port: number = resolvePort(),
+  options: StartServerOptions = {}
+): Promise<HttpServer> {
+  const allowedHosts = options.allowedHosts ?? resolveAllowedHosts();
+  const app = createMcpExpressApp({ allowedHosts });
 
   app.post('/mcp', async (req, res) => {
     const server = createServer();
@@ -78,10 +120,7 @@ export function startServer(port: number = resolvePort()): Promise<HttpServer> {
     }
   });
 
-  const methodNotAllowed = (
-    _req: unknown,
-    res: { writeHead: (code: number) => { end: (body: string) => void } }
-  ) => {
+  const methodNotAllowed = (_req: Request, res: Response) => {
     res.writeHead(405).end(
       JSON.stringify({
         jsonrpc: '2.0',

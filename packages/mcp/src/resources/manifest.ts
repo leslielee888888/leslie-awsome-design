@@ -1,17 +1,7 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import path from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { readManifestFile } from '../manifestPath.js';
 
 export const MANIFEST_RESOURCE_URI = 'components://manifest';
-
-// packages/mcp/src/resources -> packages/mcp/manifest.json
-const MANIFEST_PATH = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '..',
-  '..',
-  'manifest.json'
-);
 
 /**
  * Registers the `components://manifest` MCP resource. Reads manifest.json fresh from disk
@@ -35,7 +25,7 @@ export function registerManifestResource(server: McpServer): void {
         {
           uri: uri.href,
           mimeType: 'application/json',
-          text: readFileSync(MANIFEST_PATH, 'utf-8'),
+          text: readManifestFile(),
         },
       ],
     })

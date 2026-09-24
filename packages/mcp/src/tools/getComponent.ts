@@ -1,24 +1,13 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import path from 'node:path';
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-
-// packages/mcp/src/tools -> packages/mcp/manifest.json
-const DEFAULT_MANIFEST_PATH = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '..',
-  '..',
-  'manifest.json'
-);
+import { MANIFEST_PATH, readManifestFile } from '../manifestPath.js';
 
 export type ComponentManifest = Record<string, unknown>;
 
-/** Reads and parses manifest.json fresh from disk on every call (no caching, per spec). */
-export function readManifestFile(manifestPath: string = DEFAULT_MANIFEST_PATH): ComponentManifest {
-  const raw = readFileSync(manifestPath, 'utf-8');
-  return JSON.parse(raw) as ComponentManifest;
+/** Reads manifest.json fresh from disk (via ../manifestPath.ts) and parses it. */
+function parseManifest(manifestPath: string = MANIFEST_PATH): ComponentManifest {
+  return JSON.parse(readManifestFile(manifestPath)) as ComponentManifest;
 }
 
 /**
@@ -36,9 +25,9 @@ export function readManifestFile(manifestPath: string = DEFAULT_MANIFEST_PATH): 
  */
 export async function getComponentToolHandler(
   { name }: { name: string },
-  manifestPath: string = DEFAULT_MANIFEST_PATH
+  manifestPath: string = MANIFEST_PATH
 ): Promise<CallToolResult> {
-  const manifest = readManifestFile(manifestPath);
+  const manifest = parseManifest(manifestPath);
 
   if (!Object.hasOwn(manifest, name)) {
     throw new Error(`No component "${name}" found in the manifest`);

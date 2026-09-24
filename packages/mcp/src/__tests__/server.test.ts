@@ -2,10 +2,12 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { request as httpRequest } from 'node:http';
 import type { Server as HttpServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { LATEST_PROTOCOL_VERSION } from '@modelcontextprotocol/sdk/types.js';
 import { startServer } from '../index';
 import { buildTokenTree } from '../tokenTree';
 
@@ -116,5 +118,109 @@ describe('MCP server smoke test (real HTTP server + real MCP client over Streama
     });
 
     expect(result.isError).toBe(true);
+  });
+});
+
+/**
+ * Sends a raw POST /mcp with a real MCP `initialize` JSON-RPC request, using an explicit
+ * `Host` header (which the MCP client's own transport can't override - `Host` is a
+ * forbidden header under the Fetch spec). Connects by IP so only the `Host` header,
+ * not the actual TCP destination, varies - exactly what a LAN client behind a hostname/IP
+ * different from `127.0.0.1` looks like from the server's perspective.
+ */
+function postInitialize(
+  port: number,
+  hostHeader: string
+): Promise<{ status: number; body: string }> {
+  return new Promise((resolve, reject) => {
+    const payload = JSON.stringify({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'initialize',
+      params: {
+        protocolVersion: LATEST_PROTOCOL_VERSION,
+        capabilities: {},
+        clientInfo: { name: 'host-header-test-client', version: '0.0.0' },
+      },
+    });
+
+    const req = httpRequest(
+      {
+        hostname: '127.0.0.1',
+        port,
+        path: '/mcp',
+        method: 'POST',
+        headers: {
+          Host: hostHeader,
+          'Content-Type': 'application/json',
+          Accept: 'application/json, text/event-stream',
+          'Content-Length': Buffer.byteLength(payload),
+        },
+      },
+      (res) => {
+        let body = '';
+        res.on('data', (chunk: Buffer) => {
+          body += chunk.toString('utf-8');
+        });
+        res.on('end', () => resolve({ status: res.statusCode ?? 0, body }));
+      }
+    );
+    req.on('error', reject);
+    req.write(payload);
+    req.end();
+  });
+}
+
+/**
+ * StreamableHTTPServerTransport may respond to a POST with either a plain JSON body or an
+ * SSE-framed one (`event: message\ndata: {...}\n\n`), depending on the request's `Accept`
+ * header and the transport's own heuristics. Parses either shape into the JSON-RPC payload.
+ */
+function parseJsonRpcBody(body: string): unknown {
+  const trimmed = body.trim();
+  if (!trimmed.startsWith('event:') && !trimmed.startsWith('data:')) {
+    return JSON.parse(trimmed);
+  }
+  const dataLine = trimmed.split('\n').find((line) => line.startsWith('data:'));
+  if (!dataLine) {
+    throw new Error(`No "data:" line found in SSE body: ${body}`);
+  }
+  return JSON.parse(dataLine.slice('data:'.length).trim());
+}
+
+describe('MCP server Host-header allow-list (LAN reachability, not just 127.0.0.1)', () => {
+  const lanHost = 'design-system-mcp.nas.local';
+
+  it('rejects a non-localhost Host header by default (localhost-only, safe for local dev)', async () => {
+    const httpServer = await startServer(0);
+    try {
+      const { port } = httpServer.address() as AddressInfo;
+
+      const { status, body } = await postInitialize(port, lanHost);
+
+      expect(status).toBe(403);
+      expect(body).toContain('Invalid Host');
+    } finally {
+      await new Promise<void>((resolve, reject) => {
+        httpServer.close((error) => (error ? reject(error) : resolve()));
+      });
+    }
+  });
+
+  it('accepts a non-localhost Host header and completes a real MCP handshake when that host is allow-listed (simulates ALLOWED_HOSTS on the NAS)', async () => {
+    const httpServer = await startServer(0, { allowedHosts: [lanHost] });
+    try {
+      const { port } = httpServer.address() as AddressInfo;
+
+      const { status, body } = await postInitialize(port, lanHost);
+
+      expect(status).toBe(200);
+      const parsed = parseJsonRpcBody(body) as { result?: { serverInfo?: { name?: string } } };
+      expect(parsed.result?.serverInfo?.name).toBe('design-system-mcp');
+    } finally {
+      await new Promise<void>((resolve, reject) => {
+        httpServer.close((error) => (error ? reject(error) : resolve()));
+      });
+    }
   });
 });
