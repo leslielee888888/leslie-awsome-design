@@ -76,6 +76,8 @@ interface PinInputBoxProps {
   type: 'text';
   inputMode: 'numeric' | 'text';
   value: string;
+  disabled?: true; // real native disabled, not just data-disabled — the browser
+  // blocks focus/click/tab/paste on it for free
   'data-scope': 'pin-input';
   'data-part': 'input';
   'data-index': number;
