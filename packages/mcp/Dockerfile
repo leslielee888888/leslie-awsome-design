@@ -11,6 +11,16 @@ WORKDIR /app
 # both of which read their targets via relative filesystem paths, never a
 # package import), so there's no need to build ui-react/core/tokens/
 # frameworks-react here.
+#
+# A manifests-first COPY (package.json files, then `pnpm install`, then the
+# rest of the source) was tried here for better Docker layer caching, but on
+# this Windows/Docker Desktop host it corrupted pnpm's node_modules symlinks
+# with absolute Windows host paths baked into the Linux container
+# (`readlink` resolved to `.../node_modules/E:\workspace\...`), breaking the
+# build in a way that didn't reproduce with a plain local `pnpm install` and
+# wasn't worth chasing for a caching optimization on a personal,
+# infrequently-rebuilt NAS deploy. `COPY . .` before install is slower to
+# cache but verified working end to end (see PR #39).
 FROM base AS builder
 COPY . .
 RUN pnpm install --frozen-lockfile
