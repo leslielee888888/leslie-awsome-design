@@ -44,4 +44,10 @@ describe('walkPath', () => {
   it('throws on an empty-string path instead of returning the whole tree', () => {
     expect(() => walkPath(tree, '')).toThrow();
   });
+
+  it('throws on an inherited Object.prototype member instead of resolving it (regression: `in` walks the prototype chain)', () => {
+    expect(() => walkPath(tree, 'primitive.constructor')).toThrow();
+    expect(() => walkPath(tree, 'primitive.toString')).toThrow();
+    expect(() => walkPath(tree, 'primitive.hasOwnProperty')).toThrow();
+  });
 });

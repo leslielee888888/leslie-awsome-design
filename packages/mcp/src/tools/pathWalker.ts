@@ -30,7 +30,10 @@ export function walkPath(tree: unknown, path: string): unknown {
       );
     }
 
-    if (!(segment in current)) {
+    // Object.hasOwn (not `in`) - `in` walks the prototype chain, so a segment like
+    // "constructor" or "toString" would resolve to an inherited Object.prototype member
+    // instead of throwing "not found".
+    if (!Object.hasOwn(current, segment)) {
       const at = visited.length > 0 ? visited.join('.') : '<root>';
       throw new Error(`Invalid token path "${path}": no key "${segment}" found at "${at}"`);
     }

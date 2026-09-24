@@ -51,13 +51,24 @@ const DEFAULT_TOKENS_DIR = path.join(
  */
 function readTokenGroup(filePath: string, wrapperKey: string): unknown {
   const raw = readFileSync(filePath, 'utf-8');
-  const data = JSON.parse(raw) as Record<string, unknown>;
+  const data: unknown = JSON.parse(raw);
+
+  // A malformed token file's top level might be null, an array, or another
+  // primitive - guard before using the `in` operator (which throws a raw
+  // TypeError on a non-object right-hand side) so callers always get our
+  // descriptive error instead.
+  if (data === null || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error(
+      `Expected top-level key "${wrapperKey}" in ${filePath}, but the file's top level is not an object (got ${Array.isArray(data) ? 'an array' : typeof data})`
+    );
+  }
+
   if (!(wrapperKey in data)) {
     throw new Error(
       `Expected top-level key "${wrapperKey}" in ${filePath}, found: ${Object.keys(data).join(', ')}`
     );
   }
-  return data[wrapperKey];
+  return (data as Record<string, unknown>)[wrapperKey];
 }
 
 /**

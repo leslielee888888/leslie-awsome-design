@@ -19,6 +19,18 @@ const realTokensDir = path.join(
   'tokens'
 );
 
+const malformedNullTokensDir = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '__fixtures__',
+  'malformed-null'
+);
+
+const malformedArrayTokensDir = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '__fixtures__',
+  'malformed-array'
+);
+
 describe('buildTokenTree - fixtures', () => {
   it("nests primitive color/spacing/radius under tree.primitive, unwrapping each file's own top-level key", () => {
     const tree = buildTokenTree(fixtureTokensDir);
@@ -100,6 +112,18 @@ describe('buildTokenTree - fixtures', () => {
     expect(walkPath(tree, 'shadow.sm')).toBeTruthy();
     // the doubled-key shape must NOT resolve - regression guard for the unwrap bug
     expect(() => walkPath(tree, 'primitive.color.color.gray.500')).toThrow();
+  });
+});
+
+describe('buildTokenTree - malformed token file (regression: `in` throws a raw TypeError on a non-object)', () => {
+  it("throws a descriptive error (not a raw TypeError) when a token file's top level is null", () => {
+    expect(() => buildTokenTree(malformedNullTokensDir)).toThrow(/top-level key "color"/);
+    expect(() => buildTokenTree(malformedNullTokensDir)).not.toThrow(TypeError);
+  });
+
+  it("throws a descriptive error (not a raw TypeError) when a token file's top level is an array", () => {
+    expect(() => buildTokenTree(malformedArrayTokensDir)).toThrow(/top-level key "color"/);
+    expect(() => buildTokenTree(malformedArrayTokensDir)).not.toThrow(TypeError);
   });
 });
 
