@@ -52,10 +52,11 @@
   border-color: var(--color-success-default);
 }
 
-/* `getInputProps` sets `data-disabled` only (no native `disabled`
-   attribute, so a disabled box stays focusable/typeable at the DOM level;
-   `core`'s `pinInput` gates all its own handlers on `disabled` internally) --
-   style the disabled look off `[data-disabled]`, not `:disabled`. */
+/* `getInputProps` sets a real native `disabled` too (the browser handles
+   blocking focus/click/tab/paste for free) -- `[data-disabled]` here is
+   purely the styling hook, kept separate from `:disabled` so the same look
+   applies consistently whether the box is disabled via the native attribute
+   or (in a non-DOM context, e.g. core's own tests) via `getProp` alone. */
 .box[data-disabled] {
   cursor: not-allowed;
   opacity: 0.6;
