@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { createBadgeBehavior } from '@leslielee888888/core';
 import styles from './Badge.module.css';
 
 export interface BadgeProps {
@@ -8,14 +7,14 @@ export interface BadgeProps {
   variant?: 'default' | 'success' | 'error';
 }
 
+// Plain component: `role`/`aria-live` are static attributes derived from
+// `live`, not interaction logic -- no `core` behavior object involved.
 export function Badge({ children, live, variant = 'default' }: BadgeProps) {
-  // Presentational, no state to notify about — same rationale as Card.
-  const behavior = createBadgeBehavior({ live });
-
   return (
     <span
       className={`${styles.badge} ${styles[`variant-${variant}`]}`}
-      {...behavior.getBadgeProps()}
+      role={live ? 'status' : undefined}
+      aria-live={live ? 'polite' : undefined}
     >
       {children}
     </span>

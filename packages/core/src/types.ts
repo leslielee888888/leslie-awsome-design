@@ -3,62 +3,63 @@ export type ValidationRule =
   | { type: 'pattern'; pattern: RegExp; message: string }
   | { type: 'custom'; validate: (value: string) => boolean; message: string };
 
-export interface ButtonConfig {
+/**
+ * Accessor a framework binding hands a behavior after creation (via `setGetProp`),
+ * so the behavior always reads the current value of a field instead of a snapshot
+ * captured at creation time. See `core/README.md`'s live-data principle.
+ */
+export type GetProp<T> = <K extends keyof T>(key: K) => T[K];
+
+export interface PinInputProps {
+  length: number;
+  /** @default 'numeric' */
+  type?: 'numeric' | 'alphanumeric';
   disabled?: boolean;
-  loading?: boolean;
-}
-
-export interface ButtonState {
-  pressed: boolean;
-  hovered: boolean;
-  focused: boolean;
-}
-
-export interface ButtonProps {
-  disabled: boolean;
-  'aria-busy'?: boolean;
-  onPointerDown: () => void;
-  onPointerUp: () => void;
-  onPointerEnter: () => void;
-  onPointerLeave: () => void;
-  onFocus: () => void;
-  onBlur: () => void;
-}
-
-export interface InputConfig {
-  disabled?: boolean;
-  rules?: ValidationRule[];
-  defaultValue?: string;
+  /** Consumer-supplied validation result — core has no concept of "invalid" itself. */
+  invalid?: boolean;
   onValueChange?: (value: string) => void;
+  onComplete?: (value: string) => void;
 }
 
-export interface InputState {
-  focused: boolean;
+export interface PinInputState {
+  /** length === PinInputProps['length']; '' for an empty box. */
+  values: string[];
+  focusedIndex: number | null;
+  /** values.every(v => v !== ''), recomputed once per mutation, not per prop-getter call. */
+  complete: boolean;
 }
 
-export interface InputProps {
-  disabled?: boolean;
+export interface PinInputRootProps {
+  role: 'group';
+  'data-scope': 'pin-input';
+  'data-part': 'root';
+  'data-disabled'?: true;
+  'data-invalid'?: true;
+  'data-complete'?: true;
+}
+
+export interface PinInputBoxProps {
+  type: 'text';
+  inputMode: 'numeric' | 'text';
   value: string;
-  'aria-invalid'?: boolean;
+  /**
+   * A real native `disabled`, not just `data-disabled` — the browser already
+   * blocks focus, click, keyboard and paste for free on a disabled `<input>`,
+   * which is exactly the "let HTML do it" principle this package exists for.
+   * The `onChange`/`onKeyDown`/`onPaste`/arrow-key handlers below still check
+   * `disabled` themselves too, for correctness when called directly (as
+   * core's own tests do) rather than through a real rendered `<input>`.
+   */
+  disabled?: true;
+  'data-scope': 'pin-input';
+  'data-part': 'input';
+  'data-index': number;
+  'data-disabled'?: true;
+  'data-invalid'?: true;
+  'data-complete'?: true;
   onChange: (event: { target: { value: string } }) => void;
+  onKeyDown: (event: { key: string; target: unknown }) => void;
+  onPaste: (event: { clipboardData: { getData: (format: string) => string } }) => void;
   onFocus: () => void;
   onBlur: () => void;
-}
-
-export interface CardConfig {
-  titleId?: string;
-}
-
-export interface CardProps {
-  role: string;
-  'aria-labelledby'?: string;
-}
-
-export interface BadgeConfig {
-  live?: boolean;
-}
-
-export interface BadgeProps {
-  role?: string;
-  'aria-live'?: 'polite';
 }

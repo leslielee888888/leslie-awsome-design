@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { createCardBehavior } from '@leslielee888888/core';
 import styles from './Card.module.css';
 
 export interface CardProps {
@@ -7,14 +6,11 @@ export interface CardProps {
   titleId?: string;
 }
 
+// Plain component: `role="region"` and `aria-labelledby` are static
+// attributes, not interaction logic -- no `core` behavior object involved.
 export function Card({ children, titleId }: CardProps) {
-  // Presentational, no state to notify about — called fresh every render
-  // rather than memoized (core/README.md's own testing philosophy: call
-  // the factory and inspect the returned props, nothing else).
-  const behavior = createCardBehavior({ titleId });
-
   return (
-    <div className={styles.card} {...behavior.getCardProps()}>
+    <div className={styles.card} role="region" aria-labelledby={titleId}>
       {children}
     </div>
   );
