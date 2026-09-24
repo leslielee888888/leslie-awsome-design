@@ -100,22 +100,30 @@ export function startServer(
 
   app.post('/mcp', async (req, res) => {
     const server = createServer();
-    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-    // Registered before the two awaits below (not after, as a prior version of this
-    // handler did) so cleanup always runs on `res`'s eventual close - including when
-    // `connect`/`handleRequest` throws - instead of only on the success path. On a
-    // long-lived, shared NAS process, leaving this only in the try block leaked an
-    // McpServer + StreamableHTTPServerTransport pair on every failed request.
+    let transport: StreamableHTTPServerTransport | undefined;
+    // `closed` tracks whether `res` has already finished/aborted (e.g. a client
+    // dropped the connection mid-request) - `res.on('close', ...)` fires for both a
+    // normal completed response and an abort, and on an abort it can fire *while*
+    // `connect`/`handleRequest` below are still pending. Registered here (not only
+    // inside the try, and not only after the awaits succeed) so transport/server
+    // cleanup always runs on every path - success, an internal error, or a client
+    // abort - fixing a leak where a prior version of this handler only cleaned up
+    // on the success path. The flag exists so the catch block below never attempts
+    // to write a response that's already gone: doing so mid-abort risked an
+    // unhandled error on this long-lived, shared NAS process.
+    let closed = false;
     res.on('close', () => {
-      void transport.close();
+      closed = true;
+      void transport?.close();
       void server.close();
     });
     try {
+      transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
       await server.connect(transport);
       await transport.handleRequest(req, res, req.body);
     } catch (error) {
       console.error('Error handling MCP request:', error);
-      if (!res.headersSent) {
+      if (!closed && !res.headersSent) {
         res.status(500).json({
           jsonrpc: '2.0',
           error: { code: -32603, message: 'Internal server error' },

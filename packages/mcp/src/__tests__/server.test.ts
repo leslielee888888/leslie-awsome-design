@@ -224,3 +224,57 @@ describe('MCP server Host-header allow-list (LAN reachability, not just 127.0.0.
     }
   });
 });
+
+describe('MCP server client-abort handling (regression: res.on("close") racing the in-flight request)', () => {
+  it('survives a client dropping the connection mid-request, without an unhandled exception, and stays responsive to the next request', async () => {
+    const httpServer = await startServer(0);
+    try {
+      const { port } = httpServer.address() as AddressInfo;
+
+      // Fires the same `res.on('close', ...)` cleanup path an aborted client triggers -
+      // whether or not it lands exactly mid-`connect`/`handleRequest` depends on timing,
+      // but destroying the socket immediately after writing (not waiting for a response)
+      // maximizes the chance of it, and the assertions below hold either way: no crash,
+      // and the server keeps working afterward.
+      const payload = JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: LATEST_PROTOCOL_VERSION,
+          capabilities: {},
+          clientInfo: { name: 'abort-test-client', version: '0.0.0' },
+        },
+      });
+      const req = httpRequest({
+        hostname: '127.0.0.1',
+        port,
+        path: '/mcp',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json, text/event-stream',
+          'Content-Length': Buffer.byteLength(payload),
+        },
+      });
+      req.on('error', () => {
+        // Expected - destroying our own request legitimately errors it (ECONNRESET-style).
+      });
+      req.write(payload);
+      req.destroy();
+
+      // Give the server a tick to process the abort's 'close' event before asserting
+      // it's still healthy - a crashed process would fail this next real request outright.
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const { status, body } = await postInitialize(port, '127.0.0.1');
+      expect(status).toBe(200);
+      const parsed = parseJsonRpcBody(body) as { result?: { serverInfo?: { name?: string } } };
+      expect(parsed.result?.serverInfo?.name).toBe('design-system-mcp');
+    } finally {
+      await new Promise<void>((resolve, reject) => {
+        httpServer.close((error) => (error ? reject(error) : resolve()));
+      });
+    }
+  });
+});
