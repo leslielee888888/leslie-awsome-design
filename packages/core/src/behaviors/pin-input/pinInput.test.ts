@@ -307,6 +307,17 @@ describe('pinInput', () => {
       expect(boxProps['data-invalid']).toBe(true);
     });
 
+    it('sets a real native disabled, not just data-disabled', () => {
+      // Regression: data-disabled alone is a CSS hook only — it doesn't stop
+      // the browser from focusing, clicking into, or tabbing to the input.
+      // A real `disabled` attribute is what makes that happen for free.
+      const behavior = setup({ length: 3, disabled: true });
+      expect(behavior.getInputProps({ index: 0 }).disabled).toBe(true);
+
+      const enabled = setup({ length: 3, disabled: false });
+      expect(enabled.getInputProps({ index: 0 }).disabled).toBeUndefined();
+    });
+
     it('never includes a data-value attribute', () => {
       const behavior = setup({ length: 3 });
       behavior.getInputProps({ index: 0 }).onChange({ target: { value: '1' } });
