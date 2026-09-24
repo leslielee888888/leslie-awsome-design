@@ -64,7 +64,7 @@ describe('MCP server smoke test (real HTTP server + real MCP client over Streama
     const result = await client.readResource({ uri: 'tokens://' });
 
     expect(result.contents).toHaveLength(1);
-    expect(JSON.parse(textOf(result.contents))).toEqual(buildTokenTree());
+    expect(JSON.parse(textOf(result.contents))).toEqual(await buildTokenTree());
   });
 
   it('reads the components://manifest resource and matches the on-disk manifest.json', async () => {
@@ -214,6 +214,76 @@ describe('MCP server Host-header allow-list (LAN reachability, not just 127.0.0.
 
       const { status, body } = await postInitialize(port, lanHost);
 
+      expect(status).toBe(200);
+      const parsed = parseJsonRpcBody(body) as { result?: { serverInfo?: { name?: string } } };
+      expect(parsed.result?.serverInfo?.name).toBe('design-system-mcp');
+    } finally {
+      await new Promise<void>((resolve, reject) => {
+        httpServer.close((error) => (error ? reject(error) : resolve()));
+      });
+    }
+  });
+});
+
+describe('MCP server client-abort handling', () => {
+  it('survives a client disconnecting after sending a full request but before reading the response, and stays responsive to the next request', async () => {
+    // What this test can and can't prove: it verifies the server doesn't crash and
+    // stays healthy when a client vanishes after its request reaches the handler.
+    // It does NOT reliably force the exact race the res.on('error') fix in
+    // ../index.ts guards against - a disconnect landing in the specific window
+    // where `server.connect`/`transport.handleRequest` are still pending - since
+    // that window is sub-millisecond on a local, stateless request and isn't
+    // forceable through the public HTTP interface (confirmed while writing this:
+    // destroying the socket immediately after `req.write`, before `req.end()`,
+    // aborted the connection before Express's body parser even finished reading
+    // it, so the route handler - and its res.on('close')/res.on('error') logic -
+    // never ran at all). `req.end()` first, then destroying on a later tick, at
+    // least guarantees the full request reaches the server and the handler starts;
+    // the production res.on('error') listener is what actually closes the race
+    // this test can only approximate.
+    const httpServer = await startServer(0);
+    try {
+      const { port } = httpServer.address() as AddressInfo;
+
+      const payload = JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: LATEST_PROTOCOL_VERSION,
+          capabilities: {},
+          clientInfo: { name: 'abort-test-client', version: '0.0.0' },
+        },
+      });
+      const req = httpRequest({
+        hostname: '127.0.0.1',
+        port,
+        path: '/mcp',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json, text/event-stream',
+          'Content-Length': Buffer.byteLength(payload),
+        },
+      });
+      req.on('error', () => {
+        // Expected - destroying our own request legitimately errors it (ECONNRESET-style).
+      });
+      await new Promise<void>((resolve) => {
+        req.end(payload, () => resolve());
+      });
+      // One tick after the client finished sending, so the server has a real chance
+      // to receive/parse the body and enter the route handler before we cut it off -
+      // not a guarantee of landing mid-await, just better than destroying before the
+      // body was even fully sent.
+      await new Promise((resolve) => setImmediate(resolve));
+      req.destroy();
+
+      // Give the server a tick to process the abort before asserting it's still
+      // healthy - a crashed process would fail this next real request outright.
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const { status, body } = await postInitialize(port, '127.0.0.1');
       expect(status).toBe(200);
       const parsed = parseJsonRpcBody(body) as { result?: { serverInfo?: { name?: string } } };
       expect(parsed.result?.serverInfo?.name).toBe('design-system-mcp');

@@ -100,17 +100,40 @@ export function startServer(
 
   app.post('/mcp', async (req, res) => {
     const server = createServer();
+    let transport: StreamableHTTPServerTransport | undefined;
+    // `closed` tracks whether `res` has already finished/aborted (e.g. a client
+    // dropped the connection mid-request) - `res.on('close', ...)` fires for both a
+    // normal completed response and an abort, and on an abort it can fire *while*
+    // `connect`/`handleRequest` below are still pending. Registered here (not only
+    // inside the try, and not only after the awaits succeed) so transport/server
+    // cleanup always runs on every path - success, an internal error, or a client
+    // abort - fixing a leak where a prior version of this handler only cleaned up
+    // on the success path. The flag exists so the catch block below never attempts
+    // to write a response that's already gone: doing so mid-abort risked an
+    // unhandled error on this long-lived, shared NAS process.
+    let closed = false;
+    res.on('close', () => {
+      closed = true;
+      void transport?.close();
+      void server.close();
+    });
+    // Without this, an attempted write on an already-broken connection (the `closed`
+    // check above narrows this window but can't close it entirely - Node's 'close' and
+    // 'error' events aren't guaranteed to interleave with this handler's awaits in any
+    // fixed order) would be an unhandled 'error' event, capable of crashing this
+    // long-lived, shared NAS process outright. An 'error' listener - even one that only
+    // logs - is what makes Node treat the error as handled instead.
+    res.on('error', (error) => {
+      closed = true;
+      console.error('Response stream error:', error);
+    });
     try {
-      const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+      transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
       await server.connect(transport);
       await transport.handleRequest(req, res, req.body);
-      res.on('close', () => {
-        void transport.close();
-        void server.close();
-      });
     } catch (error) {
       console.error('Error handling MCP request:', error);
-      if (!res.headersSent) {
+      if (!closed && !res.headersSent) {
         res.status(500).json({
           jsonrpc: '2.0',
           error: { code: -32603, message: 'Internal server error' },
@@ -121,13 +144,11 @@ export function startServer(
   });
 
   const methodNotAllowed = (_req: Request, res: Response) => {
-    res.writeHead(405).end(
-      JSON.stringify({
-        jsonrpc: '2.0',
-        error: { code: -32000, message: 'Method not allowed.' },
-        id: null,
-      })
-    );
+    res.status(405).json({
+      jsonrpc: '2.0',
+      error: { code: -32000, message: 'Method not allowed.' },
+      id: null,
+    });
   };
   app.get('/mcp', methodNotAllowed);
   app.delete('/mcp', methodNotAllowed);

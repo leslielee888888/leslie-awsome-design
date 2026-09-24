@@ -6,8 +6,8 @@ import { MANIFEST_PATH, readManifestFile } from '../manifestPath.js';
 export type ComponentManifest = Record<string, unknown>;
 
 /** Reads manifest.json fresh from disk (via ../manifestPath.ts) and parses it. */
-function parseManifest(manifestPath: string = MANIFEST_PATH): ComponentManifest {
-  return JSON.parse(readManifestFile(manifestPath)) as ComponentManifest;
+async function parseManifest(manifestPath: string = MANIFEST_PATH): Promise<ComponentManifest> {
+  return JSON.parse(await readManifestFile(manifestPath)) as ComponentManifest;
 }
 
 /**
@@ -27,7 +27,7 @@ export async function getComponentToolHandler(
   { name }: { name: string },
   manifestPath: string = MANIFEST_PATH
 ): Promise<CallToolResult> {
-  const manifest = parseManifest(manifestPath);
+  const manifest = await parseManifest(manifestPath);
 
   if (!Object.hasOwn(manifest, name)) {
     throw new Error(`No component "${name}" found in the manifest`);

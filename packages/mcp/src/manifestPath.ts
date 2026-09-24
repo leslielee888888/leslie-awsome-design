@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -16,7 +16,10 @@ export const MANIFEST_PATH = path.join(
  * this text as-is) and the `get_component` tool (../tools/getComponent.ts, which
  * JSON.parses it to look up an entry), so the two callers can't drift on path resolution
  * or the read itself, only on what they do with the result.
+ *
+ * Async (not `readFileSync`) so this disk read on the request path of a long-lived, shared
+ * NAS-hosted server never blocks Node's single event loop.
  */
-export function readManifestFile(manifestPath: string = MANIFEST_PATH): string {
-  return readFileSync(manifestPath, 'utf-8');
+export async function readManifestFile(manifestPath: string = MANIFEST_PATH): Promise<string> {
+  return readFile(manifestPath, 'utf-8');
 }

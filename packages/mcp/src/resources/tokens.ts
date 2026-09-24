@@ -24,7 +24,7 @@ export function registerTokensResource(server: McpServer): void {
         {
           uri: uri.href,
           mimeType: 'application/json',
-          text: JSON.stringify(buildTokenTree(), null, 2),
+          text: JSON.stringify(await buildTokenTree(), null, 2),
         },
       ],
     })
