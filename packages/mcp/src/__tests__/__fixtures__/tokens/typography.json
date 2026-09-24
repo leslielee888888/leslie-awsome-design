@@ -1,0 +1,13 @@
+{
+  "typography": {
+    "body": {
+      "$type": "typography",
+      "$value": {
+        "fontFamily": "Inter",
+        "fontWeight": 400,
+        "fontSize": "16px",
+        "lineHeight": "24px"
+      }
+    }
+  }
+}

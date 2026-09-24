@@ -1,0 +1,7 @@
+{
+  "color": {
+    "bg": {
+      "primary": { "$type": "color", "$value": "{color.gray.900}" }
+    }
+  }
+}
