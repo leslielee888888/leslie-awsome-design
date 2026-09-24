@@ -64,7 +64,7 @@ describe('MCP server smoke test (real HTTP server + real MCP client over Streama
     const result = await client.readResource({ uri: 'tokens://' });
 
     expect(result.contents).toHaveLength(1);
-    expect(JSON.parse(textOf(result.contents))).toEqual(buildTokenTree());
+    expect(JSON.parse(textOf(result.contents))).toEqual(await buildTokenTree());
   });
 
   it('reads the components://manifest resource and matches the on-disk manifest.json', async () => {

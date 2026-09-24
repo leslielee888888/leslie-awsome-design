@@ -32,8 +32,8 @@ const malformedArrayTokensDir = path.join(
 );
 
 describe('buildTokenTree - fixtures', () => {
-  it("nests primitive color/spacing/radius under tree.primitive, unwrapping each file's own top-level key", () => {
-    const tree = buildTokenTree(fixtureTokensDir);
+  it("nests primitive color/spacing/radius under tree.primitive, unwrapping each file's own top-level key", async () => {
+    const tree = await buildTokenTree(fixtureTokensDir);
 
     // primitive/color.json fixture is { "color": { "gray": { "500": {...} } } } -
     // the wrapper "color" key must be stripped, not doubled.
@@ -48,8 +48,8 @@ describe('buildTokenTree - fixtures', () => {
     });
   });
 
-  it('keeps semantic light/dark as separate nested keys, never merged, and unwraps the file\'s "color" key', () => {
-    const tree = buildTokenTree(fixtureTokensDir);
+  it('keeps semantic light/dark as separate nested keys, never merged, and unwraps the file\'s "color" key', async () => {
+    const tree = await buildTokenTree(fixtureTokensDir);
 
     expect(tree.semantic.color.light).toEqual({
       bg: { primary: { $type: 'color', $value: '{color.white}' } },
@@ -61,8 +61,8 @@ describe('buildTokenTree - fixtures', () => {
     expect(tree.semantic.color.light).not.toEqual(tree.semantic.color.dark);
   });
 
-  it('includes typography and shadow as direct top-level categories, unwrapped', () => {
-    const tree = buildTokenTree(fixtureTokensDir);
+  it('includes typography and shadow as direct top-level categories, unwrapped', async () => {
+    const tree = await buildTokenTree(fixtureTokensDir);
 
     expect(tree.typography).toEqual({
       body: {
@@ -84,8 +84,8 @@ describe('buildTokenTree - fixtures', () => {
     });
   });
 
-  it('produces all five categories from the fixture set', () => {
-    const tree = buildTokenTree(fixtureTokensDir);
+  it('produces all five categories from the fixture set', async () => {
+    const tree = await buildTokenTree(fixtureTokensDir);
 
     expect(tree.primitive).toBeTruthy();
     expect(tree.primitive.color).toBeTruthy();
@@ -97,8 +97,8 @@ describe('buildTokenTree - fixtures', () => {
     expect(tree.shadow).toBeTruthy();
   });
 
-  it('resolves single-wrapped dotted paths via walkPath (no doubled category key)', () => {
-    const tree = buildTokenTree(fixtureTokensDir);
+  it('resolves single-wrapped dotted paths via walkPath (no doubled category key)', async () => {
+    const tree = await buildTokenTree(fixtureTokensDir);
 
     expect(walkPath(tree, 'primitive.color.gray.500')).toEqual({
       $type: 'color',
@@ -116,20 +116,20 @@ describe('buildTokenTree - fixtures', () => {
 });
 
 describe('buildTokenTree - malformed token file (regression: `in` throws a raw TypeError on a non-object)', () => {
-  it("throws a descriptive error (not a raw TypeError) when a token file's top level is null", () => {
-    expect(() => buildTokenTree(malformedNullTokensDir)).toThrow(/top-level key "color"/);
-    expect(() => buildTokenTree(malformedNullTokensDir)).not.toThrow(TypeError);
+  it("throws a descriptive error (not a raw TypeError) when a token file's top level is null", async () => {
+    await expect(buildTokenTree(malformedNullTokensDir)).rejects.toThrow(/top-level key "color"/);
+    await expect(buildTokenTree(malformedNullTokensDir)).rejects.not.toThrow(TypeError);
   });
 
-  it("throws a descriptive error (not a raw TypeError) when a token file's top level is an array", () => {
-    expect(() => buildTokenTree(malformedArrayTokensDir)).toThrow(/top-level key "color"/);
-    expect(() => buildTokenTree(malformedArrayTokensDir)).not.toThrow(TypeError);
+  it("throws a descriptive error (not a raw TypeError) when a token file's top level is an array", async () => {
+    await expect(buildTokenTree(malformedArrayTokensDir)).rejects.toThrow(/top-level key "color"/);
+    await expect(buildTokenTree(malformedArrayTokensDir)).rejects.not.toThrow(TypeError);
   });
 });
 
 describe('buildTokenTree - real token data (smoke test)', () => {
-  it('resolves the real packages/tokens/tokens data with all categories present and non-empty', () => {
-    const tree = buildTokenTree(realTokensDir);
+  it('resolves the real packages/tokens/tokens data with all categories present and non-empty', async () => {
+    const tree = await buildTokenTree(realTokensDir);
 
     expect(tree.primitive).toBeTruthy();
     expect(Object.keys(tree.primitive.color as object).length).toBeGreaterThan(0);
@@ -147,8 +147,8 @@ describe('buildTokenTree - real token data (smoke test)', () => {
     expect(Object.keys(tree.shadow as object).length).toBeGreaterThan(0);
   });
 
-  it('uses the default (no-arg) tokensDir to resolve the same real data', () => {
-    const tree = buildTokenTree();
+  it('uses the default (no-arg) tokensDir to resolve the same real data', async () => {
+    const tree = await buildTokenTree();
 
     expect(tree.primitive).toBeTruthy();
     expect(tree.semantic).toBeTruthy();
@@ -156,8 +156,8 @@ describe('buildTokenTree - real token data (smoke test)', () => {
     expect(tree.shadow).toBeTruthy();
   });
 
-  it('resolves single-wrapped real paths via walkPath - regression guard for the doubled-category-key bug', () => {
-    const tree = buildTokenTree(realTokensDir);
+  it('resolves single-wrapped real paths via walkPath - regression guard for the doubled-category-key bug', async () => {
+    const tree = await buildTokenTree(realTokensDir);
 
     // primitive/color.json's real "gray.900" swatch, reached WITHOUT a doubled "color.color".
     expect(walkPath(tree, 'primitive.color.gray.900')).toEqual({

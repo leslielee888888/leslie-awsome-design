@@ -25,7 +25,7 @@ export function registerManifestResource(server: McpServer): void {
         {
           uri: uri.href,
           mimeType: 'application/json',
-          text: readManifestFile(),
+          text: await readManifestFile(),
         },
       ],
     })

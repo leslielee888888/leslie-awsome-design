@@ -17,7 +17,7 @@ import { walkPath } from './pathWalker.js';
  * without going through a live server.
  */
 export async function getTokenToolHandler({ path }: { path: string }): Promise<CallToolResult> {
-  const tree = buildTokenTree();
+  const tree = await buildTokenTree();
   const node = walkPath(tree, path);
 
   return {
