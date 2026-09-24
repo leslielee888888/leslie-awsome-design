@@ -18,6 +18,7 @@ export function sampleBehavior(initialProps: SampleBehaviorProps): {
   return {
     getState: () => state,
     getWidgetProps: () => ({
+      id: 'sample-panel',
       role: 'region',
       'data-state': initialProps.disabled ? 'closed' : 'open',
     }),

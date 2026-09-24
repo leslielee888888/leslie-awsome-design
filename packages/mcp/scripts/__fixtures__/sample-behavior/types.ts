@@ -18,7 +18,15 @@ export interface SampleBehaviorState {
   activeIndex: number | null;
 }
 
-export interface SampleBehaviorPanelProps {
+// Not itself a `${prefix}*Props` interface, so it's never picked up as a
+// prop-getter shape on its own — it only matters through `extends` below,
+// exercising generate-manifest's inherited-member flattening.
+interface SampleBehaviorBaseProps {
+  /** Shared identifier applied to every part of the behavior. */
+  id: string;
+}
+
+export interface SampleBehaviorPanelProps extends SampleBehaviorBaseProps {
   /** ARIA role for the panel element. */
   role: 'region';
   'data-state': 'open' | 'closed';

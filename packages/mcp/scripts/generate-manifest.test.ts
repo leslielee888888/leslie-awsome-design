@@ -92,6 +92,57 @@ describe('extractBehaviorManifest (fixture)', () => {
     expect(names).not.toContain("'data-state'");
     expect(names).toContain('data-state');
   });
+
+  it('flattens fields inherited via `extends` into the extracted output', () => {
+    const manifest = loadFixtureManifest();
+
+    // SampleBehaviorPanelProps extends SampleBehaviorBaseProps, which
+    // declares `id` — InterfaceDeclaration.getProperties() alone would miss
+    // it, since it's not declared directly on SampleBehaviorPanelProps.
+    expect(manifest.props.panel.fields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'id',
+          type: 'string',
+          optional: false,
+          description: 'Shared identifier applied to every part of the behavior.',
+        }),
+      ])
+    );
+  });
+});
+
+describe('extractBehaviorManifest error guards (fixtures)', () => {
+  function loadManifestFor(fixtureName: string) {
+    const fixtureDir = path.join(scriptDir, '__fixtures__', fixtureName);
+    const project = new Project({ skipAddingFilesFromTsConfig: true });
+    const typesSourceFile = project.addSourceFileAtPath(path.join(fixtureDir, 'types.ts'));
+    return extractBehaviorManifest(project, typesSourceFile, fixtureDir, fixtureName);
+  }
+
+  it('throws when a behavior directory has more than one candidate function', () => {
+    // behaviorA.ts and behaviorB.ts both export a function with a
+    // get*Props-bearing return type — silently picking the first one would
+    // hide the second behavior's shape entirely.
+    expect(() => loadManifestFor('multi-function-behavior')).toThrow(
+      /found 2 candidate functions in behavior "multi-function-behavior"/i
+    );
+  });
+
+  it('throws when a prop-getter key would be empty', () => {
+    // empty-key-behavior's getSelfProps returns EmptyKeyBehaviorProps itself
+    // — stripping the prefix and "Props" suffix leaves an empty string,
+    // which would otherwise silently overwrite nothing (an empty key) or
+    // collide across behaviors.
+    expect(() => loadManifestFor('empty-key-behavior')).toThrow(/derives an empty manifest key/i);
+  });
+
+  it('throws when two differently-named prop-getters derive the same key', () => {
+    // collision-behavior's getRootProps and getWrapperProps both return
+    // CollisionBehaviorBoxProps, so both derive the key "box" — the second
+    // assignment must throw instead of silently overwriting the first.
+    expect(() => loadManifestFor('collision-behavior')).toThrow(/duplicate prop-getter key "box"/i);
+  });
 });
 
 describe('generateManifest against the real pin-input source (smoke test)', () => {

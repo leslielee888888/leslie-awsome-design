@@ -59,23 +59,41 @@ function normalizeWhitespace(text: string): string {
   return text.trim().replace(/\s+/g, ' ');
 }
 
+// `iface.getProperties()` (the InterfaceDeclaration API) only returns members
+// declared directly on that interface — a field pulled in via `extends`
+// silently vanishes from the manifest instead of erroring. `iface.getType()`
+// (the Type API, backed by the checker) flattens inherited members in, so we
+// read fields off the resolved *type*'s property symbols instead, then walk
+// back to each symbol's declaration for the JSDoc/type-text/optionality we
+// need.
 function extractFields(iface: InterfaceDeclaration): FieldManifest[] {
-  return iface.getProperties().map((prop) => {
-    const jsDoc = prop.getJsDocs()[0];
-    const description = jsDoc && normalizeWhitespace(jsDoc.getDescription());
-    const defaultTag = jsDoc?.getTags().find((tag) => tag.getTagName() === 'default');
-    const defaultValue =
-      defaultTag?.getCommentText() && normalizeWhitespace(defaultTag.getCommentText()!);
+  return iface
+    .getType()
+    .getProperties()
+    .map((symbol) => {
+      const decl = symbol.getDeclarations()[0];
+      if (!decl || !Node.isPropertySignature(decl)) {
+        throw new Error(
+          `Property "${symbol.getName()}" on interface "${iface.getName()}" is not a plain property ` +
+            `signature (found ${decl?.getKindName() ?? 'no declaration'}) — extend generate-manifest.ts to handle it`
+        );
+      }
 
-    const field: FieldManifest = {
-      name: stripQuotes(prop.getName()),
-      type: prop.getTypeNodeOrThrow().getText(),
-      optional: prop.hasQuestionToken(),
-    };
-    if (description) field.description = description;
-    if (defaultValue) field.default = defaultValue;
-    return field;
-  });
+      const jsDoc = decl.getJsDocs()[0];
+      const description = jsDoc && normalizeWhitespace(jsDoc.getDescription());
+      const defaultTag = jsDoc?.getTags().find((tag) => tag.getTagName() === 'default');
+      const defaultValue =
+        defaultTag?.getCommentText() && normalizeWhitespace(defaultTag.getCommentText()!);
+
+      const field: FieldManifest = {
+        name: stripQuotes(decl.getName()),
+        type: decl.getTypeNodeOrThrow().getText(),
+        optional: decl.hasQuestionToken(),
+      };
+      if (description) field.description = description;
+      if (defaultValue) field.default = defaultValue;
+      return field;
+    });
 }
 
 function getInterfaceOrThrow(sourceFile: SourceFile, name: string): InterfaceDeclaration {
@@ -92,8 +110,16 @@ function getInterfaceOrThrow(sourceFile: SourceFile, name: string): InterfaceDec
  * pinInput.ts, returning `{ getRootProps, getInputProps, ... }`). Scans every
  * non-test `.ts` file directly under the behavior directory rather than
  * assuming a filename, since only pin-input exists today.
+ *
+ * If more than one exported function in the directory qualifies (a behavior
+ * split across files, or two factory functions in one file), that's
+ * ambiguous — throw rather than silently keeping only the first match.
  */
-function findBehaviorFunction(behaviorSourceFiles: SourceFile[]): FunctionDeclaration | undefined {
+function findBehaviorFunction(
+  behaviorSourceFiles: SourceFile[],
+  behaviorDirName: string
+): FunctionDeclaration | undefined {
+  const candidates: FunctionDeclaration[] = [];
   for (const sourceFile of behaviorSourceFiles) {
     for (const fn of sourceFile.getFunctions()) {
       if (!fn.isExported()) continue;
@@ -104,10 +130,21 @@ function findBehaviorFunction(behaviorSourceFiles: SourceFile[]): FunctionDeclar
         .some(
           (member) => Node.isPropertySignature(member) && /^get.+Props$/.test(member.getName())
         );
-      if (hasPropGetter) return fn;
+      if (hasPropGetter) candidates.push(fn);
     }
   }
-  return undefined;
+
+  if (candidates.length > 1) {
+    const locations = candidates
+      .map((fn) => `${fn.getSourceFile().getBaseName()}:${fn.getName() ?? '<anonymous>'}`)
+      .join(', ');
+    throw new Error(
+      `Found ${candidates.length} candidate functions in behavior "${behaviorDirName}" ` +
+        `(${locations}), expected exactly 1 — disambiguate or extend generate-manifest.ts to handle it`
+    );
+  }
+
+  return candidates[0];
 }
 
 /**
@@ -185,7 +222,7 @@ export function extractBehaviorManifest(
     .addSourceFilesAtPaths(path.join(behaviorDir, '*.ts'))
     .filter((sourceFile) => !sourceFile.getFilePath().endsWith('.test.ts'));
 
-  const behaviorFn = findBehaviorFunction(behaviorSourceFiles);
+  const behaviorFn = findBehaviorFunction(behaviorSourceFiles, dirName);
   if (!behaviorFn) {
     throw new Error(
       `No exported function with a get*Props-bearing return type found under ${behaviorDir}`
@@ -195,6 +232,20 @@ export function extractBehaviorManifest(
   const props: Record<string, InterfaceManifest> = {};
   for (const interfaceName of extractPropGetterInterfaceNames(behaviorFn)) {
     const key = propGetterKey(interfaceName, prefix);
+    if (key === '') {
+      throw new Error(
+        `Prop-getter interface "${interfaceName}" in behavior "${dirName}" derives an empty ` +
+          `manifest key (it equals the config interface name "${prefix}Props") — rename the ` +
+          `interface or extend generate-manifest.ts to handle it`
+      );
+    }
+    if (Object.hasOwn(props, key)) {
+      throw new Error(
+        `Duplicate prop-getter key "${key}" in behavior "${dirName}": both ` +
+          `"${props[key].interfaceName}" and "${interfaceName}" derive this key — rename one of ` +
+          `the interfaces or extend generate-manifest.ts to disambiguate`
+      );
+    }
     const iface = getInterfaceOrThrow(typesSourceFile, interfaceName);
     props[key] = { interfaceName, fields: extractFields(iface) };
   }
