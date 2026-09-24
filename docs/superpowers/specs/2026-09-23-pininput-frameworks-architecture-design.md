@@ -35,7 +35,7 @@ packages:
   - 'packages/frameworks/*'
 ```
 
-Dependency chain: `core` → `frameworks/react` → `ui-react`. `ui-react` no longer depends on `core` directly — only `frameworks/react` does.
+Dependency chain: `core` → `frameworks/react` → `ui-react`, but `ui-react` depends on both `core` and `frameworks/react` directly (not just the latter) — it needs `core` to import behavior factories like `pinInput` themselves, and `frameworks/react` for the `useBehavior`/`createBehaviorContext` mechanics that wire them into React. `frameworks/react` depends on neither `ui-react` nor `core`.
 
 ## 2. `core` changes (breaking)
 
@@ -76,6 +76,8 @@ interface PinInputBoxProps {
   type: 'text';
   inputMode: 'numeric' | 'text';
   value: string;
+  disabled?: true; // real native disabled, not just data-disabled — the browser
+  // blocks focus/click/tab/paste on it for free
   'data-scope': 'pin-input';
   'data-part': 'input';
   'data-index': number;
@@ -89,36 +91,48 @@ interface PinInputBoxProps {
   onBlur: () => void;
 }
 
-export function pinInput(): {
+export function pinInput(initialProps: PinInputProps): {
   getState: () => PinInputState;
   subscribe: (listener: () => void) => () => void;
   setGetProp: (getProp: GetProp<PinInputProps>) => void;
-  getRootProps: () => PinInputRootProps;
-  getInputProps: (part: { index: number }) => PinInputBoxProps;
+  // Resizes the internal values array when length changes after mount.
+  // Separate from setGetProp (which only ever needs to run once) since the
+  // constructor already sizes values correctly from initialProps.length —
+  // this exists purely for *later* length changes.
+  setLength: (length: number) => void;
+  // `live` is optional and falls back to getProp when omitted, which is what
+  // core's own tests do (see "Live-ref mechanism, corrected" below for why
+  // real React usage always passes it instead).
+  getRootProps: (live?: Pick<PinInputProps, 'disabled' | 'invalid'>) => PinInputRootProps;
+  getInputProps: (
+    part: { index: number },
+    live?: Pick<PinInputProps, 'disabled' | 'invalid' | 'type'>
+  ) => PinInputBoxProps;
 } {
-  // ...factory body: takes no arguments — nothing to configure at creation. Holds
-  // `getProp` in a closure variable, set exactly once via setGetProp (§3 wires this up
-  // right after the behavior is created, before anything else can call getRootProps()
-  // or getInputProps()). Creates the store (complete is recomputed once, inside the
-  // store's own setState, whenever values changes — never inside
-  // getRootProps()/getInputProps() themselves, which would mean an O(length) scan
-  // running once per box, per render, i.e. O(length^2) total instead of O(length)).
-  // Reads length/type/disabled/invalid/onValueChange/onComplete all the same way, via
-  // getProp(key), called fresh at the exact moment a current value is actually needed
-  // (inside an onChange handler, inside getRootProps() itself, etc.) rather than at
-  // creation time.
+  // ...factory body: seeded from initialProps so getRootProps()/getInputProps()
+  // are correct even before setGetProp ever runs (see the live-ref section).
+  // getProp is set exactly once via setGetProp (§3 wires this up right after
+  // the behavior is created). Creates the store (complete is recomputed once,
+  // inside the store's own setState, whenever values changes — never inside
+  // getRootProps()/getInputProps() themselves, which would mean an O(length)
+  // scan running once per box, per render, i.e. O(length^2) total instead of
+  // O(length)). length/onValueChange/onComplete are read via getProp(key)
+  // inside event handlers only (always safe there — see below); disabled/
+  // invalid/type are read from the `live` argument when the caller (a real
+  // consumer) provides one, falling back to getProp otherwise.
 }
 ```
 
-The `data-*` attributes follow [Zag.js's own Pin Input component convention](https://zagjs.com/components/pin-input#data-attributes) exactly (`data-scope`, `data-part`, `data-disabled`, `data-invalid`, `data-complete`, `data-index`) — they're CSS-selector hooks (`[data-part="input"][data-complete]`) so `ui-react` styles state via attribute selectors in its CSS Modules instead of computing classNames from JS-tracked booleans. `data-complete` reads directly off `state.complete` (see `PinInputState` above — cached, not recomputed per call); `data-disabled`/`data-invalid` come from calling `getProp('disabled')`/`getProp('invalid')` at the moment `getRootProps()`/`getInputProps()` actually run. We deliberately do **not** add a `data-value` attribute (holding the entered digit) — Zag's own pin-input doesn't expose one either, since CSS can't do anything useful with an arbitrary digit and it would just duplicate state that's already on the input's `.value`.
+The `data-*` attributes follow [Zag.js's own Pin Input component convention](https://zagjs.com/components/pin-input#data-attributes) exactly (`data-scope`, `data-part`, `data-disabled`, `data-invalid`, `data-complete`, `data-index`) — they're CSS-selector hooks (`[data-part="input"][data-complete]`) so `ui-react` styles state via attribute selectors in its CSS Modules instead of computing classNames from JS-tracked booleans. `data-complete` reads directly off `state.complete` (see `PinInputState` above — cached, not recomputed per call); `data-disabled`/`data-invalid` come from the `live` argument (see below for why). We deliberately do **not** add a `data-value` attribute (holding the entered digit) — Zag's own pin-input doesn't expose one either, since CSS can't do anything useful with an arbitrary digit and it would just duplicate state that's already on the input's `.value`.
 
 Interaction rules owned here:
 
 - **Auto-advance**: entering a valid character in box `i` moves focus to box `i + 1` (no-op past the last box).
 - **Backspace-to-previous**: Backspace on an empty box moves focus to box `i - 1` and clears it; Backspace on a non-empty box just clears it (standard OTP-input convention).
 - **Arrow-key navigation**: `ArrowLeft`/`ArrowRight` move focus without changing values.
-- **Paste-splitting**: pasting a string longer than one character starting at box `i` fills boxes `i..i+n` with successive characters and moves focus to the first empty box after (or the last box).
+- **Paste-splitting**: pasting a string longer than one character starting at box `i` fills boxes `i..i+n` with successive characters and moves focus to the first empty box after (or the last box). The same splitting also applies to a multi-character `onChange` value (a browser/OS autofilling an SMS one-time code delivers the whole code in one event, not one keystroke per box) — distinguished from manually retyping over an already-filled box (a native single-char box then reports old+new as a 2-character value) by checking whether the first character matches what was already there.
 - **Numeric filtering**: when `type: 'numeric'`, non-digit characters are rejected before they reach state.
+- **Length changes after mount**: `setLength(length)` resizes the internal `values` array, preserving existing entries — called from a real effect in `PinInput.Root` keyed on `length` itself, not part of `setGetProp` (which only ever needs to run once).
 - **Completion**: `onComplete(value)` fires the first time every box holds a non-empty value (also the moment `data-complete` starts appearing); `onValueChange(value)` fires on every change, where `value` is the boxes joined into one string.
 
 This ships as a **major version bump** on `@leslielee888888/core` (currently `0.2.0` → `1.0.0`), with a changeset explicitly documenting the four removed exports as a breaking change, since they're already published and a third party could depend on them.
@@ -169,16 +183,17 @@ function useBehavior<
 
 Because nothing is classified as structural or live anymore, `useBehavior(factory, props)` really is just two arguments — the factory and one flat props object — with no wrapper hook, no per-behavior key list to maintain, and no derived type that has to be trusted to line up with what got stripped. `ui-react` imports behavior factories (e.g. `pinInput`) directly from `@leslielee888888/core`, alongside `useBehavior` from `@leslielee888888/frameworks-react`.
 
-**`createBehaviorContext`** is this package's other export. Every compound behavior (`pinInput` today; a future Tabs or Select, per the Open follow-ups) needs the exact same "share the behavior with descendants, guard against use outside its Root" wiring — written once here instead of every compound component in `ui-react` hand-rolling its own `createContext`/`useContext`/non-null-assertion. It's simpler now than it would have been under the structural/live design, since there's only one thing to share:
+**`createBehaviorContext`** is this package's other export. Every compound behavior (`pinInput` today; a future Tabs or Select, per the Open follow-ups) needs the exact same "share the behavior with descendants, guard against use outside its Root" wiring — written once here instead of every compound component in `ui-react` hand-rolling its own `createContext`/`useContext`/non-null-assertion. It's simpler now than it would have been under the structural/live design, since there's only one thing to share. `rootName` is passed once, at creation — not by every descendant part at every call site, which would mean defining a name per _part_ (and redoing that for every part of every future compound component) instead of one name per component _family_:
 
 ```ts
 // createBehaviorContext.ts
-function createBehaviorContext<TBehavior>() {
+function createBehaviorContext<TBehavior extends object>(rootName: string) {
   const Context = createContext<TBehavior | null>(null);
 
-  function useBehaviorContext(componentName: string): TBehavior {
+  function useBehaviorContext(): TBehavior {
     const value = useContext(Context);
-    if (!value) throw new Error(`${componentName} must be used within its Root`);
+    if (value === null)
+      throw new Error(`${rootName} components must be used within a <${rootName}.Root>`);
     return value;
   }
 
@@ -190,11 +205,11 @@ function createBehaviorContext<TBehavior>() {
 
 **Button, Input, Card, Badge** become plain components: native `<button disabled>` / `<input value/onChange>`, no `core` import, no behavior object, no store. Input's validation (`rules`) moves to a small local pure-function helper inside `ui-react` (not a `core` export, since it has no state or interaction — it's a plain value → error-message mapping).
 
-**New `components/pin-input/`**, a compound component. `PinInput.Root` takes one flat props object from its consumer, hands it straight to `useBehavior`, and shares the resulting `behavior` — and only the behavior — through `createBehaviorContext`'s `Provider`:
+**New `components/pin-input/`**, a compound component. `PinInput.Root` takes one flat props object from its consumer, hands it straight to `useBehavior`, and shares `{ behavior, live }` through `createBehaviorContext`'s `Provider` — `live` (not just `behavior` alone) is necessary; see below for why:
 
 ```tsx
 const { Provider: PinInputProvider, useBehaviorContext: usePinInputContext } =
-  createBehaviorContext<ReturnType<typeof pinInput>>();
+  createBehaviorContext<{ behavior: ReturnType<typeof pinInput>; live: PinInputLive }>('PinInput');
 
 function Root({
   length,
@@ -214,25 +229,38 @@ function Root({
     onComplete,
   });
 
+  useEffect(() => {
+    behavior.setLength(length);
+  }, [behavior, length]);
+
+  // Memoized on the three primitives themselves, so this object's identity
+  // — and the Context value wrapping it — stays stable across the
+  // re-renders useBehavior's own store subscription triggers on every
+  // keystroke. Without this, disabled/invalid/type would be correct but
+  // every PinInput.Input box would re-render on every keystroke anyway,
+  // undoing the whole point of this design.
+  const live = useMemo(() => ({ disabled, invalid, type }), [disabled, invalid, type]);
+  const contextValue = useMemo(() => ({ behavior, live }), [behavior, live]);
+
   return (
-    <PinInputProvider value={behavior}>
-      <div {...behavior.getRootProps()}>{children}</div>
+    <PinInputProvider value={contextValue}>
+      <div {...behavior.getRootProps(live)}>{children}</div>
     </PinInputProvider>
   );
 }
 
 function Input({ index }: { index: number }) {
-  const behavior = usePinInputContext('PinInput.Input');
-  return <input {...behavior.getInputProps({ index })} />;
+  const { behavior, live } = usePinInputContext();
+  return <input {...behavior.getInputProps({ index }, live)} />;
 }
 ```
 
-`behavior` is created exactly once (§3) and never replaced, so it's a genuinely stable Context value — `Input` reads the same object reference on every render regardless of what `disabled`/`invalid`/the callbacks are doing, because `getRootProps()`/`getInputProps()` no longer take a live argument at all; they read `disabled`/`invalid`/the callbacks internally, via the same `getProp` closure `pinInput` was wired up with in §3. This also resolves, rather than just accepts, the render-fan-out cost the `/simplify` pass found in the earlier structural/live design: there's no more `liveProps` object being rebuilt fresh on every render for the Provider to hand out, so no `PinInput.Input` box re-renders unless the store itself changes something that box actually reads.
+`behavior` itself is still created exactly once and never replaced — but `getRootProps()`/`getInputProps()` **do** take a live argument, for `disabled`/`invalid`/`type` specifically. Those three are read _synchronously during render_ (that's what `{...behavior.getRootProps()}` in JSX does), and `getProp`'s ref-backed accessor (§3) is only updated in a post-commit effect — one render behind whenever read synchronously during any render after the first, since that render's own effect hasn't run yet. Passing them as a live argument, sourced directly from the current render's own props, sidesteps the ref entirely for this read. `length`/`onValueChange`/`onComplete` stay on `getProp` unchanged — they're only ever read from inside event handlers, which fire after at least one full render+commit+effect cycle has already happened, so there's no staleness risk there. See "Live-ref mechanism, corrected" below for the full reasoning and the regression this fixes.
 
 - `PinInput.Root` — as above. Props: `length`, `type?`, `disabled?`, `invalid?`, `onValueChange?`, `onComplete?`, `children`.
 - `PinInput.Control` — plain styled flex-row wrapper for the visible boxes (the "Control" part from the Ark UI/Zag.js-style reference anatomy). No context read needed — purely layout.
 - `PinInput.Input` — one visible box, as above. Props: `index`. All visual states (empty/filled/focus/disabled/invalid/complete) are driven by the `data-*` attributes and native DOM state (`:focus`, `value !== ''`) from §2 — no JS-tracked booleans or separate `error` prop needed in `ui-react` itself.
-- `PinInput.HiddenInput` — a visually-hidden native `<input>` mirroring the full joined value from context, for native form submission and browser autofill (per the reference anatomy's `HiddenInput` part).
+- `PinInput.HiddenInput` — a visually-hidden native `<input>` mirroring the full joined value from context, for native form submission and browser autofill (per the reference anatomy's `HiddenInput` part). Also reads `live.disabled` — a disabled group's hidden input needs to stop submitting too.
 
 Export shape: `Button`, `Input`, `Card`, `Badge` (unchanged public API, now plain components internally), plus a `PinInput` namespace object: `{ Root, Control, Input, HiddenInput }`.
 
@@ -245,7 +273,15 @@ That assumption turned out to be too broad, confirmed by actually building it an
 1. **Write at commit time, not render time.** `ref.current = value` moved into `useLayoutEffect(() => { ref.current = value })`. This alone still failed: `Error: Cannot access refs during render` on the line that passed the accessor into `useState`'s initializer.
 2. **Never hand the accessor to anything invoked during render.** `useState`'s initializer runs during render (on mount), so calling `factory(getProp)` there — passing a ref-reading closure into a function that executes during render — trips the rule independently of when the ref itself is written. The fix: create the behavior with **no accessor at all** (`useState(factory)`, zero arguments), then wire the accessor in separately, inside its own `useLayoutEffect`, after the behavior already exists.
 
-With both changes, `npx eslint` on the resulting file exits 0 — no errors, no warnings, `exhaustive-deps` included. §2–§4 above reflect this mechanism directly rather than the earlier structural/live split, which it replaces entirely: every field is read through `getProp`, uniformly, so there's no longer anything to classify as "structural" vs. "live," which also resolves the placement question the structural/live split raised (whether that classification belonged in `core` or `frameworks/react`) by removing the classification rather than relocating it.
+With both changes, `npx eslint` on the resulting file exits 0 — no errors, no warnings, `exhaustive-deps` included. This mechanism replaces the earlier structural/live split entirely — but not quite in the "every field is read through `getProp`, uniformly, nothing to classify" form first claimed here. See the next section for the correction.
+
+## Live-ref mechanism, corrected: `getProp` is one render behind when read synchronously during render
+
+A Finalize-stage `/code-review high` pass (over the whole feature diff, after all three tasks had merged) found the most serious bug in this design: `getProp`'s ref-backed accessor is only updated inside a post-commit `useLayoutEffect` — correct for event handlers and effects (which always run after at least one full render+commit+effect cycle has completed) but **one render behind** whenever read _synchronously during render_, on any render after the first. §2–§4's `PinInput.Root`/`.Input` do exactly that: `{...behavior.getRootProps()}` in JSX calls it synchronously, every render, not just the first. Flip `disabled` on `PinInput.Root`, and that render's own output — including the native `disabled` attribute (§2) — still reflects the _previous_ render's value, since this render's own effect (which would update the ref) hasn't run yet. Nothing forces a corrective re-render afterward, since `setGetProp` doesn't touch the store. Confirmed with a failing-then-passing regression test in `ui-react`'s `PinInput.test.tsx`.
+
+The "every field reads through `getProp` uniformly" claim above was the actual bug: it's only true, and only safe, for fields read from _inside event handlers_ (`length`, `onValueChange`, `onComplete` — read inside `onChange`/`onKeyDown`/`onPaste`, which fire after commit, so `getProp` is genuinely fresh there). `disabled`, `invalid`, and `type` are read both from event handlers (safe) _and_ directly inside `getRootProps()`/`getInputProps()`'s own return-value construction (unsafe, since those are called synchronously during render) — so §2's `getRootProps`/`getInputProps` now take an optional `live` argument for exactly those three fields, sourced directly from the current render's own props rather than through the ref. `live` is optional and falls back to `getProp` when omitted, which is what `core`'s own tests do — there's no render-timing risk in a plain JS test, only in a real React render. In §4, `PinInput.Root` memoizes `live` (keyed on the three primitives themselves) before passing it through Context, so its identity — and the Context value wrapping it — stays stable across the re-renders `useBehavior`'s own store subscription triggers on every keystroke; without that memoization, `disabled`/`invalid`/`type` would be correct again, but every `PinInput.Input` box would re-render on every keystroke, reintroducing the exact cost this whole design was built to avoid.
+
+This does **not** revive the earlier structural/live prop split (§1's dependency-chain note and `defineBehavior`/`structuralKeys` stay gone) — it's a narrower, more precise version: only the handful of fields a behavior's own prop-getters read for their _own return value_ need a live argument; everything read only inside event handlers stays on `getProp`, unchanged.
 
 ## Testing
 
